@@ -1,0 +1,246 @@
+:root {
+  --bg-body: #f5fbff;
+  --bg-card: #ffffff;
+  --bg-blue: #1f6fff;
+  --bg-green: #08b469;
+  --bg-help: #f1f7ff;
+  --text-main: #1f2933;
+  --text-muted: #6b7280;
+  --border-soft: #e2e8f0;
+  --radius-lg: 18px;
+  --radius-md: 14px;
+  --shadow-soft: 0 18px 35px rgba(15, 23, 42, 0.12);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+.citizen-page {
+  min-height: 100vh;
+  padding: 24px 40px 40px;
+  color: var(--text-main);
+  background: radial-gradient(
+    circle at top,
+    #e6f5ff 0,
+    #f5fbff 55%,
+    #f5fbff 100%
+  );
+}
+
+.citizen-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.portal-title {
+  font-size: 20px;
+  margin: 0;
+}
+
+.portal-subtitle {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.logout-button {
+  border: none;
+  background: #ffe5e5;
+  color: #e11d48;
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.citizen-main {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* Top big user card */
+
+.citizen-top-card {
+  display: flex;
+  align-items: center;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  box-shadow: var(--shadow-soft);
+  margin-bottom: 18px;
+}
+
+.user-icon-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  background: #ebf1ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 16px;
+}
+
+.user-icon {
+  font-size: 24px;
+  color: #1f2933;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-greeting {
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+
+.user-id {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Stats cards row */
+
+.citizen-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  color: #ffffff;
+  box-shadow: var(--shadow-soft);
+}
+
+.stat-blue {
+  background: var(--bg-blue);
+}
+
+.stat-green {
+  background: var(--bg-green);
+}
+
+.stat-title {
+  margin: 0 0 8px;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.stat-value {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* Action grid */
+
+.citizen-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.action-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-soft);
+  padding: 14px 18px;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+  transition: transform 0.12s ease, box-shadow 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.action-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.action-icon {
+  font-size: 18px;
+  color: #4b5563;
+}
+
+.action-card h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.action-card p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.action-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+  border-color: #bfdbfe;
+}
+
+/* Help section */
+
+.citizen-help {
+  background: var(--bg-help);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  border: 1px dashed #cbd5f5;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.citizen-help h3 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  color: var(--text-main);
+}
+
+/* Responsive */
+
+@media (max-width: 900px) {
+  .citizen-stats-row {
+    grid-template-columns: 1fr;
+  }
+
+  .citizen-actions-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .citizen-page {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .citizen-actions-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .citizen-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+}
