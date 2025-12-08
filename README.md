@@ -1,7 +1,7 @@
 
   # Shopkeeper Portal Code
 
-  This is a code bundle for Shopkeeper Portal Code. The original project is available at https://www.figma.com/design/zvr9WREifSWrKyfiugmALk/Shopkeeper-Portal-Code.
+  This is a code bundle for Shopkeeper Portal Code. The original project is available
 
   ## Running the code
 
