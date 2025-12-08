@@ -7,9 +7,25 @@ import {
   MdShoppingCart, 
   MdReportProblem 
 } from "react-icons/md";
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 import "../styles/CitizenDashboardPage.css";
 
 const CitizenDashboardPage = () => {
+  const navigate = useNavigate(); // Initialize navigate
+
+  const handleFamilyQuotaClick = () => {
+    navigate("/citizen/family-quota"); // Redirect to FamilyQuota page
+  };
+
+  const handleBackToHome = () => {
+    navigate("/"); // Redirect back to homepage
+  };
+
+  const handleLogout = () => { // Add this function
+    navigate("/citizen/login");
+  };
+
+
   return (
     <div className="citizen-page">
       <header className="citizen-header">
@@ -17,7 +33,14 @@ const CitizenDashboardPage = () => {
           <h1 className="portal-title">नागरिक पोर्टल</h1>
           <p className="portal-subtitle">Citizen Portal</p>
         </div>
-        <button className="logout-button">Logout</button>
+        <div className="header-buttons">
+          <button className="home-button" onClick={handleBackToHome}>
+            Home
+          </button>
+          <button className="logout-button" onClick={handleLogout}> {/* Add onClick */}
+          Logout
+        </button>
+        </div>
       </header>
 
       <main className="citizen-main">
@@ -50,7 +73,8 @@ const CitizenDashboardPage = () => {
 
         {/* Action grid */}
         <section className="citizen-actions-grid">
-          <button className="action-card">
+          {/* Add onClick to this button */}
+          <button className="action-card" onClick={handleFamilyQuotaClick}>
             <div className="action-card-header">
               <MdHome className="action-icon" />
               <h3>परिवार का कोटा</h3>

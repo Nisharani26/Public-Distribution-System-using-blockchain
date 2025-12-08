@@ -1,0 +1,234 @@
+/* Page Background & Layout */
+.auth-page-container {
+  min-height: 100vh;
+  background-color: #f0f8ff; /* Very light blue background */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Top Back Button */
+.top-back-btn {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  color: #3b82f6; /* Blue */
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* Card Container */
+.auth-card {
+  background: white;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  width: 100%;
+  max-width: 420px; /* Standard width for login */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Signup Card width might need to be slightly wider for stepper if needed, 
+   but 420px usually works fine. */
+.signup-card-width {
+  max-width: 450px;
+}
+
+/* Icon Header (Login Page) */
+.icon-header {
+  margin-bottom: 24px;
+}
+
+.blue-circle-icon {
+  width: 80px;
+  height: 80px;
+  background-color: #e0f2fe; /* Light blue circle */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Typography */
+.text-center {
+  text-align: center;
+}
+
+.hindi-title {
+  font-size: 24px;
+  color: #1e3a8a; /* Dark blue */
+  margin: 0 0 8px 0;
+  font-weight: 500;
+}
+
+.english-subtitle {
+  font-size: 16px;
+  color: #1d4ed8; /* Brighter blue */
+  font-weight: 500;
+  margin: 0;
+}
+
+.mb-8 { margin-bottom: 32px; }
+.mb-6 { margin-bottom: 24px; }
+
+/* Stepper (Signup Page) */
+.stepper-container {
+  display: flex;
+  align-items: flex-start; /* Changed from center to accommodate labels below */
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 32px;
+  position: relative;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 2;
+}
+
+.step-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.step.active .step-circle {
+  background-color: #2563eb; /* Active Blue */
+  color: white;
+}
+
+.step-circle.inactive {
+  background-color: #e5e7eb; /* Grey */
+  color: #6b7280;
+}
+
+.step-label {
+  font-size: 12px;
+  color: #4b5563;
+  text-align: center;
+  width: 70px; /* Fixed width to prevent layout shifts */
+}
+
+.step-line {
+  flex: 1;
+  height: 2px;
+  background-color: #e5e7eb;
+  margin-top: 20px; /* Align with center of circle */
+  margin-left: -10px;
+  margin-right: -10px;
+  z-index: 1;
+}
+
+/* Form Styles */
+.auth-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+
+.input-group label {
+  font-size: 14px;
+  color: #4b5563; /* Dark grey */
+  font-weight: 500;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  color: #9ca3af;
+}
+
+.styled-input {
+  width: 100%;
+  padding: 12px 12px 12px 44px; /* Left padding for icon */
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #1f2937;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.styled-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+/* Buttons */
+.primary-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: #2563eb; /* Primary Blue */
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background-color 0.2s;
+}
+
+.primary-btn:hover {
+  background-color: #1d4ed8;
+}
+
+/* Bottom Footer Links */
+.bottom-link {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.new-user-text {
+  color: #16a34a; /* Green for Hindi text */
+  font-weight: 500;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: #16a34a; /* Green */
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 4px;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}

@@ -1,0 +1,49 @@
+{
+  "familyDetails": {
+    "totalMembers": 5,
+    "cardType": "BPL",
+    "currentMonth": "December 2025"
+  },
+  "monthlyAllocations": [
+    {
+      "itemName": "Rice",
+      "itemNameHindi": "चावल",
+      "allocated": 15,
+      "unit": "kg",
+      "used": 0,
+      "remaining": 15
+    },
+    {
+      "itemName": "Wheat",
+      "itemNameHindi": "गेहूं",
+      "allocated": 10,
+      "unit": "kg",
+      "used": 5,
+      "remaining": 5
+    },
+    {
+      "itemName": "Sugar",
+      "itemNameHindi": "चीनी",
+      "allocated": 2,
+      "unit": "kg",
+      "used": 0,
+      "remaining": 2
+    },
+    {
+      "itemName": "Kerosene",
+      "itemNameHindi": "मिट्टी का तेल",
+      "allocated": 5,
+      "unit": "L",
+      "used": 2,
+      "remaining": 3
+    }
+  ],
+  "notes": [
+    "कोटा हर महीने की पहली तारीख को रीसेट हो जाता है।",
+    "अनुपयोगी कोटा अगले महीने में नहीं जोड़ा जाता है।",
+    "किसी भी समस्या के लिए अपने नजदीकी राशन डीलर से संपर्क करें।",
+    "Quota resets on the 1st of every month.",
+    "Unused quota does not carry forward to the next month.",
+    "Contact your nearest ration dealer for any issues."
+  ]
+}
