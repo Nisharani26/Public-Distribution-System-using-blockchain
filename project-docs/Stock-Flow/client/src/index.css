@@ -1,0 +1,90 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* ============================= */
+/* Theme & Variables             */
+/* ============================= */
+
+:root {
+  --background: 180 50% 97%;
+  --foreground: 222.2 84% 4.9%;
+
+  --primary: 142.1 76.2% 36.3%;
+  --border: 214.3 31.8% 91.4%;
+  --radius: 0.75rem;
+}
+
+/* ============================= */
+/* Base Styles                   */
+/* ============================= */
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    margin: 0;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: system-ui, sans-serif;
+  }
+}
+
+/* ============================= */
+/* ❌ REMOVE ALL GLOBAL BUTTON   */
+/* ============================= */
+/* ❌ NO button {}, ❌ NO outline overrides */
+
+
+/* ============================= */
+/* ✅ REQUEST ACTION BUTTONS     */
+/* ============================= */
+
+/* ACCEPT */
+.request-status-accept {
+  background-color: hsl(142 76% 90%) !important;
+  border: 1px solid hsl(142 70% 65%) !important;
+  color: hsl(142 60% 25%) !important;
+
+  font-weight: 600;
+  border-radius: 9999px;
+  padding: 0.75rem 1.25rem;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+
+  transition: all 0.2s ease-in-out;
+}
+
+.request-status-accept:hover {
+  background-color: hsl(142 76% 80%) !important;
+}
+
+/* REJECT */
+.request-status-reject {
+  background-color: hsl(0 100% 96%) !important;
+  border: 1px solid hsl(0 100% 70%) !important;
+  color: hsl(0 100% 45%) !important;
+
+  font-weight: 600;
+  border-radius: 9999px;
+  padding: 0.75rem 1.25rem;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+
+  transition: all 0.2s ease-in-out;
+}
+
+.request-status-reject:hover {
+  background-color: hsl(0 100% 90%) !important;
+  color: hsl(0 100% 40%) !important;
+}
+
+
