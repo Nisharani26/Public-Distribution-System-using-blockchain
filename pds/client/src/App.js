@@ -1,10 +1,11 @@
 import React from 'react'
-import Home from './components/Home'
+import LoginPage from './pages/LoginPage'
+
 
 export default function App() {
   return (
     <div>
-      <Home/>
+      <LoginPage/>
     </div>
   )
 }
