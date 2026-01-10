@@ -15,7 +15,7 @@ import {
   X
 } from "lucide-react";
 
-export default function Navbar({ userName, role, onLogout }) {
+export default function Navbar({ userName, role }) {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -61,83 +61,81 @@ export default function Navbar({ userName, role, onLogout }) {
 
   return (
     <nav className={`${getRoleColor()} text-white shadow-lg`}>
-  <div className="w-full px-2 sm:px-4">
-    <div className="flex items-center justify-between h-16">
-      <div className="flex items-center space-x-3">
-        <ShoppingBag className="w-8 h-8" />
-        <div>
-          <h1 className="font-bold text-lg sm:text-xl">{getRoleName()}</h1>
-          <p className="text-xs sm:text-sm opacity-90">{userName}</p>
+      <div className="w-full px-2 sm:px-4">
+        <div className="flex items-center justify-between h-16">
+          <div className="flex items-center space-x-3">
+            <ShoppingBag className="w-8 h-8" />
+            <div>
+              <h1 className="font-bold text-lg sm:text-xl">{getRoleName()}</h1>
+              <p className="text-xs sm:text-sm opacity-90">{userName}</p>
+            </div>
+          </div>
+
+          <div className="hidden md:flex items-center space-x-2">
+            {links.map((link) => {
+              const Icon = link.icon;
+              const isActive = location.pathname === link.path;
+              return (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm ${
+                    isActive
+                      ? "bg-white bg-opacity-20"
+                      : "hover:bg-white hover:bg-opacity-10"
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{link.label}</span>
+                </Link>
+              );
+            })}
+
+            <Link
+              to="/"
+              className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-white hover:bg-opacity-10 ml-2"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="text-sm">Logout</span>
+            </Link>
+          </div>
+
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden p-2 rounded-lg hover:bg-white hover:bg-opacity-10"
+          >
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
         </div>
-      </div>
 
-      <div className="hidden md:flex flex-wrap items-center space-x-2">
-        {links.map((link) => {
-          const Icon = link.icon;
-          const isActive = location.pathname === link.path;
-          return (
+        {mobileMenuOpen && (
+          <div className="md:hidden pb-4 space-y-2">
+            {links.map((link) => {
+              const Icon = link.icon;
+              return (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10"
+                >
+                  <Icon className="w-5 h-5" />
+                  <span className="font-medium">{link.label}</span>
+                </Link>
+              );
+            })}
+
             <Link
-              key={link.path}
-              to={link.path}
-              className={`flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-lg text-sm transition-colors ${
-                isActive ? "bg-white bg-opacity-20" : "hover:bg-white hover:bg-opacity-10"
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              <span>{link.label}</span>
-            </Link>
-          );
-        })}
-        <button
-          onClick={onLogout}
-          className="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-lg hover:bg-white hover:bg-opacity-10 ml-2"
-        >
-          <LogOut className="w-4 h-4" />
-          <span className="text-sm">Logout</span>
-        </button>
-      </div>
-
-      <button
-        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        className="md:hidden p-2 rounded-lg hover:bg-white hover:bg-opacity-10"
-      >
-        {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-      </button>
-    </div>
-
-    {mobileMenuOpen && (
-      <div className="md:hidden pb-4 space-y-2">
-        {links.map((link) => {
-          const Icon = link.icon;
-          const isActive = location.pathname === link.path;
-          return (
-            <Link
-              key={link.path}
-              to={link.path}
+              to="/"
               onClick={() => setMobileMenuOpen(false)}
-              className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-                isActive ? "bg-white bg-opacity-20" : "hover:bg-white hover:bg-opacity-10"
-              }`}
+              className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10"
             >
-              <Icon className="w-5 h-5" />
-              <span className="font-medium">{link.label}</span>
+              <LogOut className="w-5 h-5" />
+              <span className="font-medium">Logout</span>
             </Link>
-          );
-        })}
-        <button
-          onClick={() => {
-            setMobileMenuOpen(false);
-            onLogout();
-          }}
-          className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10 w-full text-left"
-        >
-          <LogOut className="w-5 h-5" />
-          <span className="font-medium">Logout</span>
-        </button>
+          </div>
+        )}
       </div>
-    )}
-  </div>
-</nav>
-
+    </nav>
   );
 }
