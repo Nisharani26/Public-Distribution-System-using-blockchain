@@ -1,17 +1,17 @@
-import React, { useState } from "react";
-import { User, Lock, Phone, Building2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Building2 } from "lucide-react";
 import OTPModal from "../components/OTPModal";
 import PasswordSetupModal from "../components/PasswordSetupModal";
+import { Link } from "react-router-dom";
 
-// Mock users
 const MOCK_USERS = {
-    RAT123456: {
+    "123456789012": {
         name: "Rajesh Kumar",
         role: "user",
         phone: "9876543210",
         isFirstLogin: false,
     },
-    SHP001: {
+    "999999999999": {
         name: "Sunita Provisions",
         role: "shopkeeper",
         phone: "9123456789",
@@ -26,33 +26,65 @@ const MOCK_USERS = {
     },
 };
 
-export default function LoginPage({ onLogin }) {
+export default function LoginPage() {
     const [role, setRole] = useState("user");
     const [userId, setUserId] = useState("");
     const [phone, setPhone] = useState("");
+    const [password, setPassword] = useState("");
     const [showOTP, setShowOTP] = useState(false);
     const [showPasswordSetup, setShowPasswordSetup] = useState(false);
-    const [password, setPassword] = useState("");
     const [pendingUser, setPendingUser] = useState(null);
     const [error, setError] = useState("");
+    const [redirectToAuthority, setRedirectToAuthority] = useState(false);
+
+    useEffect(() => {
+        if (redirectToAuthority) {
+            const link = document.getElementById("redirect-link");
+            link.click();
+        }
+    }, [redirectToAuthority]);
 
     const handleSendOTP = (e) => {
         e.preventDefault();
         setError("");
 
+        const twelveDigitRegex = /^\d{12}$/;
+        const authorityRegex = /^ADM\d{3}$/;
+        const phoneRegex = /^\d{10}$/;
+        const passwordRegex = /^.{8,}$/;
+
+        if ((role === "user" || role === "shopkeeper") && !twelveDigitRegex.test(userId)) {
+            setError("ID must be a valid 12-digit number");
+            return;
+        }
+
+        if (role === "authority" && !authorityRegex.test(userId)) {
+            setError("Invalid Authority ID format");
+            return;
+        }
+
+        if (role !== "authority" && !phoneRegex.test(phone)) {
+            setError("Mobile number must be 10 digits");
+            return;
+        }
+
+        if (role === "authority" && !passwordRegex.test(password)) {
+            setError("Password must be at least 8 characters");
+            return;
+        }
+
         const user = MOCK_USERS[userId];
 
-        // Authority login using password
         if (role === "authority") {
             if (!user || user.password !== password) {
                 setError("Invalid Authority ID or Password");
                 return;
             }
-            onLogin({ id: userId, ...user });
+            setPendingUser({ id: userId, ...user });
+            setRedirectToAuthority(true);
             return;
         }
 
-        // OTP login for others
         if (!user || user.role !== role || user.phone !== phone) {
             setError("Invalid credentials");
             return;
@@ -67,7 +99,7 @@ export default function LoginPage({ onLogin }) {
             setShowOTP(false);
             setShowPasswordSetup(true);
         } else {
-            onLogin(pendingUser);
+            setShowOTP(false);
         }
     };
 
@@ -92,31 +124,50 @@ export default function LoginPage({ onLogin }) {
 
                     <input
                         type="text"
-                        placeholder="ID"
+                        placeholder={
+                            role === "user"
+                                ? "12-digit Ration Card No"
+                                : role === "shopkeeper"
+                                ? "12-digit Shop No"
+                                : "ADM001"
+                        }
                         value={userId}
-                        onChange={(e) => setUserId(e.target.value.toUpperCase())}
+                        onChange={(e) => {
+                            const value = e.target.value;
+                            if (role === "authority") {
+                                setUserId(value.toUpperCase());
+                            } else {
+                                if (/^\d*$/.test(value) && value.length <= 12) {
+                                    setUserId(value);
+                                }
+                            }
+                        }}
                         className="w-full p-2 border rounded"
                     />
 
                     {role !== "authority" && (
                         <input
                             type="text"
-                            placeholder="Phone Number"
+                            placeholder="10-digit Phone Number"
                             value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
+                            onChange={(e) => {
+                                if (/^\d*$/.test(e.target.value) && e.target.value.length <= 10) {
+                                    setPhone(e.target.value);
+                                }
+                            }}
                             className="w-full p-2 border rounded"
                         />
                     )}
+
                     {role === "authority" && (
                         <input
                             type="password"
-                            placeholder="Password"
+                            placeholder="Minimum 8 characters"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             className="w-full p-2 border rounded"
                         />
                     )}
-
 
                     {error && <p className="text-red-600 text-sm">{error}</p>}
 
@@ -136,8 +187,17 @@ export default function LoginPage({ onLogin }) {
 
             {showPasswordSetup && (
                 <PasswordSetupModal
-                    onComplete={() => onLogin(pendingUser)}
+                    onComplete={() => setShowPasswordSetup(false)}
                     onClose={() => setShowPasswordSetup(false)}
+                />
+            )}
+
+            {redirectToAuthority && (
+                <Link
+                    to="/authority/dashboard"
+                    state={{ user: pendingUser }}
+                    style={{ display: "none" }}
+                    id="redirect-link"
                 />
             )}
         </div>
