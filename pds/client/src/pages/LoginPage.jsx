@@ -76,14 +76,37 @@ export default function LoginPage() {
         const user = MOCK_USERS[userId];
 
         if (role === "authority") {
-            if (!user || user.password !== password) {
-                setError("Invalid Authority ID or Password");
-                return;
-            }
-            setPendingUser({ id: userId, ...user });
-            setRedirectToAuthority(true);
+            fetch("http://localhost:5000/api/auth/authority/login", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    authorityId: userId,
+                    password: password,
+                }),
+            })
+                .then((res) => res.json())
+                .then((data) => {
+                    if (!data.token) {
+                        setError(data.message || "Login failed");
+                        return;
+                    }
+
+                    // Save JWT
+                    localStorage.setItem("token", data.token);
+
+                    // Redirect to dashboard
+                    setPendingUser(data.authority);
+                    setRedirectToAuthority(true);
+                })
+                .catch(() => {
+                    setError("Server error. Try again.");
+                });
+
             return;
         }
+
 
         if (!user || user.role !== role || user.phone !== phone) {
             setError("Invalid credentials");
@@ -128,8 +151,8 @@ export default function LoginPage() {
                             role === "user"
                                 ? "12-digit Ration Card No"
                                 : role === "shopkeeper"
-                                ? "12-digit Shop No"
-                                : "ADM001"
+                                    ? "12-digit Shop No"
+                                    : "ADM001"
                         }
                         value={userId}
                         onChange={(e) => {
