@@ -1,9 +1,22 @@
-import React from "react";
-import { useLocation } from "react-router-dom";
+import React, { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
-import { Users, Building2, TrendingUp, Package } from "lucide-react";
+import { Users, Building2, TrendingUp, Package, AlertCircle, CheckCircle } from "lucide-react";
+import {
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    Legend,
+    ResponsiveContainer,
+    PieChart,
+    Pie,
+    Cell,
+} from "recharts";
+import { jwtDecode } from "jwt-decode";
 
-
+// Mock Data
 const monthlyDistribution = [
     { month: "Jul", rice: 1200, wheat: 950, sugar: 280 },
     { month: "Aug", rice: 1350, wheat: 1020, sugar: 310 },
@@ -20,15 +33,44 @@ const stockByItem = [
     { name: "Cooking Oil", value: 240, color: "#10b981" },
 ];
 
+const pendingActions = [
+    { id: 1, title: "3 Pending Complaints", status: "pending" },
+    { id: 2, title: "2 Shops Low Stock", status: "warning" },
+    { id: 3, title: "5 Unverified Transactions", status: "alert" },
+];
+
 export default function AuthorityDashboard() {
-    const location = useLocation();
-    const user = location.state?.user;
+    const [user, setUser] = useState(null);
+
+    // Get user info from token
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+        if (token) {
+            try {
+                const decoded = jwtDecode(token);
+                setUser({
+                    name: decoded.name || "Authority",
+                    authorityId: decoded.id,
+                    role: decoded.role,
+                });
+            } catch (err) {
+                console.error("Invalid token", err);
+                localStorage.removeItem("token");
+            }
+        }
+    }, []);
+
+    // Logout
+    const handleLogout = () => {
+        localStorage.removeItem("token");
+        window.location.href = "/";
+    };
 
     if (!user) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
                 <h1 className="text-xl font-bold text-red-600">
-                    Error: User data not found. Please login first.
+                    Error: User not found. Please login first.
                 </h1>
             </div>
         );
@@ -36,20 +78,38 @@ export default function AuthorityDashboard() {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            <Navbar userName={user.name} role="authority" onLogout={() => window.location.reload()} />
+            <Navbar userName={user.name} role="authority" onLogout={handleLogout} />
 
             <div className="max-w-full px-4 sm:px-6 lg:px-8 py-8">
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Authority Dashboard</h1>
-                <p className="text-gray-600 text-sm sm:text-base">
-                    Welcome, {user?.name || "Authority"} • District Overview:{" "}
-                    {new Date().toLocaleDateString("en-IN", {
-                        day: "2-digit",
-                        month: "long",
-                        year: "numeric",
-                    })}
-                </p>
+                {/* Welcome Section */}
+                <div className="bg-gradient-to-r from-purple-500 to-purple-400 rounded-xl p-6 mb-8 shadow-lg flex flex-col sm:flex-row items-center justify-between">
+                    <div>
+                        <h1 className="text-3xl sm:text-4xl font-extrabold text-white mb-2 drop-shadow-lg">
+                            Welcome, {user.name}!
+                        </h1>
+                        <p className="text-white/90 text-sm sm:text-base drop-shadow-sm">
+                            District Overview:{" "}
+                            <span className="font-semibold">
+                                {new Date().toLocaleDateString("en-IN", {
+                                    day: "2-digit",
+                                    month: "long",
+                                    year: "numeric",
+                                })}
+                            </span>
+                        </p>
+                    </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                    <div className="mt-4 sm:mt-0 flex items-center">
+                        <Users className="w-14 h-14 text-white opacity-90 mr-4" />
+                        <div className="text-white/90 text-sm sm:text-base">
+                            Have a productive day managing distributions!
+                        </div>
+                    </div>
+                </div>
+
+
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                     <div className="bg-white rounded-lg shadow p-4 sm:p-6">
                         <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-2">
                             <Users className="w-6 h-6 text-blue-600" />
@@ -81,6 +141,69 @@ export default function AuthorityDashboard() {
                         <h3 className="text-xl sm:text-2xl font-bold text-gray-900">8,830 kg</h3>
                         <p className="text-sm sm:text-base text-gray-600">Total Stock Remaining</p>
                     </div>
+                </div>
+
+
+                {/* Pending Complaints */}
+                <div className="mb-8">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4">Pending Actions Required</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {pendingActions.map((complaint) => (
+                            <div
+                                key={complaint.id}
+                                className={`p-5 rounded-xl border-l-4 shadow-md flex flex-col justify-center ${complaint.status === "pending"
+                                        ? "border-blue-400 bg-blue-50 text-blue-800"
+                                        : complaint.status === "warning"
+                                            ? "border-amber-400 bg-amber-50 text-amber-800"
+                                            : "border-red-400 bg-red-50 text-red-800"
+                                    } hover:scale-105 transition-transform duration-300`}
+                            >
+                                <p className="font-semibold text-base sm:text-lg">{complaint.title}</p>
+                                <p className="text-xs text-gray-500 mt-1">Click to view details</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+
+
+                {/* Monthly Distribution Chart */}
+                <div className="bg-white rounded-lg shadow p-6 mb-8">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4">Monthly Distribution Trends</h2>
+                    <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={monthlyDistribution}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="month" />
+                            <YAxis />
+                            <Tooltip />
+                            <Legend />
+                            <Bar dataKey="rice" fill="#3b82f6" name="Rice (kg)" />
+                            <Bar dataKey="wheat" fill="#f59e0b" name="Wheat (kg)" />
+                            <Bar dataKey="sugar" fill="#ec4899" name="Sugar (kg)" />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+
+                {/* Current Stock Distribution Pie Chart */}
+                <div className="bg-white rounded-lg shadow p-6 mb-8">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4">Current Stock Distribution</h2>
+                    <ResponsiveContainer width="100%" height={300}>
+                        <PieChart>
+                            <Pie
+                                data={stockByItem}
+                                cx="50%"
+                                cy="50%"
+                                outerRadius={100}
+                                dataKey="value"
+                                label={({ name, value }) => `${name}: ${value}kg`}
+                            >
+                                {stockByItem.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                                ))}
+                            </Pie>
+                            <Tooltip />
+                        </PieChart>
+                    </ResponsiveContainer>
                 </div>
             </div>
         </div>

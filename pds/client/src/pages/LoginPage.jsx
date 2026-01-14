@@ -4,28 +4,6 @@ import OTPModal from "../components/OTPModal";
 import PasswordSetupModal from "../components/PasswordSetupModal";
 import { Link } from "react-router-dom";
 
-const MOCK_USERS = {
-    "123456789012": {
-        name: "Rajesh Kumar",
-        role: "user",
-        phone: "9876543210",
-        isFirstLogin: false,
-    },
-    "999999999999": {
-        name: "Sunita Provisions",
-        role: "shopkeeper",
-        phone: "9123456789",
-        isFirstLogin: false,
-    },
-    ADM001: {
-        name: "District Administrator",
-        role: "authority",
-        phone: "9000000001",
-        password: "admin123",
-        isFirstLogin: false,
-    },
-};
-
 export default function LoginPage() {
     const [role, setRole] = useState("user");
     const [userId, setUserId] = useState("");
@@ -44,12 +22,12 @@ export default function LoginPage() {
         }
     }, [redirectToAuthority]);
 
-    const handleSendOTP = (e) => {
+    const handleSendOTP = async (e) => {
         e.preventDefault();
         setError("");
 
         const twelveDigitRegex = /^\d{12}$/;
-        const authorityRegex = /^ADM\d{3}$/;
+        const authorityRegex = /^[A-Za-z0-9]{6}$/; // authority: 6 alphanumeric
         const phoneRegex = /^\d{10}$/;
         const passwordRegex = /^.{8,}$/;
 
@@ -59,7 +37,7 @@ export default function LoginPage() {
         }
 
         if (role === "authority" && !authorityRegex.test(userId)) {
-            setError("Invalid Authority ID format");
+            setError("Authority ID must be 6 characters long and contain letters & numbers");
             return;
         }
 
@@ -73,52 +51,42 @@ export default function LoginPage() {
             return;
         }
 
-        const user = MOCK_USERS[userId];
+       if (role === "authority") {
+    try {
+        const res = await fetch("http://localhost:5000/api/auth/authority/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ authorityId: userId, password }),
+        });
 
-        if (role === "authority") {
-            fetch("http://localhost:5000/api/auth/authority/login", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    authorityId: userId,
-                    password: password,
-                }),
-            })
-                .then((res) => res.json())
-                .then((data) => {
-                    if (!data.token) {
-                        setError(data.message || "Login failed");
-                        return;
-                    }
+        console.log("Response status:", res.status);
 
-                    // Save JWT
-                    localStorage.setItem("token", data.token);
+        const data = await res.json();
+        console.log("Response data:", data);
 
-                    // Redirect to dashboard
-                    setPendingUser(data.authority);
-                    setRedirectToAuthority(true);
-                })
-                .catch(() => {
-                    setError("Server error. Try again.");
-                });
-
+        if (!res.ok) {
+            setError(data.message || "Login failed");
             return;
         }
 
+        localStorage.setItem("token", data.token);
+        setPendingUser(data.authority);
+        setRedirectToAuthority(true);
 
-        if (!user || user.role !== role || user.phone !== phone) {
-            setError("Invalid credentials");
-            return;
-        }
+    } catch (err) {
+        console.error("Fetch error:", err);
+        setError("Server error. Try again.");
+    }
 
-        setPendingUser({ id: userId, ...user });
-        setShowOTP(true);
+    return;
+}
+
+
+        setError("Only authority login is supported for now.");
     };
 
     const handleOTPVerify = () => {
-        if (pendingUser.isFirstLogin) {
+        if (pendingUser?.isFirstLogin) {
             setShowOTP(false);
             setShowPasswordSetup(true);
         } else {
@@ -152,7 +120,7 @@ export default function LoginPage() {
                                 ? "12-digit Ration Card No"
                                 : role === "shopkeeper"
                                     ? "12-digit Shop No"
-                                    : "ADM001"
+                                    : "Authority ID (6 chars)"
                         }
                         value={userId}
                         onChange={(e) => {
@@ -185,7 +153,7 @@ export default function LoginPage() {
                     {role === "authority" && (
                         <input
                             type="password"
-                            placeholder="Minimum 8 characters"
+                            placeholder="Password (min 8 chars)"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             className="w-full p-2 border rounded"
@@ -201,11 +169,7 @@ export default function LoginPage() {
             </div>
 
             {showOTP && (
-                <OTPModal
-                    phone={phone}
-                    onVerify={handleOTPVerify}
-                    onClose={() => setShowOTP(false)}
-                />
+                <OTPModal phone={phone} onVerify={handleOTPVerify} onClose={() => setShowOTP(false)} />
             )}
 
             {showPasswordSetup && (
