@@ -7,5 +7,4 @@ router.post("/authority/login", authorityLogin);
 
 router.get("/authority/dashboard", authMiddleware, getAuthorityData);
 
-
 module.exports = router;
