@@ -1,40 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from "../components/Navbar";
 import { Users, Search, Eye, Building2 } from 'lucide-react';
 
-const ALL_USERS = [
-  { id: 1, name: 'Rajesh Kumar', rationId: 'RAT123456', phone: '9876543210', assignedShop: 'SHP001', shopName: 'Sunita Provisions', familySize: 4, registrationDate: '2020-03-15' },
-  { id: 2, name: 'Priya Sharma', rationId: 'RAT123457', phone: '9876543211', assignedShop: 'SHP001', shopName: 'Sunita Provisions', familySize: 3, registrationDate: '2019-08-22' },
-  { id: 3, name: 'Amit Patel', rationId: 'RAT123458', phone: '9876543212', assignedShop: 'SHP002', shopName: 'Ganesh Store', familySize: 5, registrationDate: '2021-01-10' },
-  { id: 4, name: 'Sunita Devi', rationId: 'RAT123459', phone: '9876543213', assignedShop: 'SHP001', shopName: 'Sunita Provisions', familySize: 4, registrationDate: '2018-11-05' },
-  { id: 5, name: 'Ramesh Gupta', rationId: 'RAT123460', phone: '9876543214', assignedShop: 'SHP003', shopName: 'Krishna Stores', familySize: 6, registrationDate: '2020-07-18' },
-  { id: 6, name: 'Meera Singh', rationId: 'RAT123461', phone: '9876543215', assignedShop: 'SHP002', shopName: 'Ganesh Store', familySize: 3, registrationDate: '2022-02-28' },
-];
-
 export default function AuthorityUsers({ user, onLogout }) {
+  const [users, setUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterShop, setFilterShop] = useState('all');
+  const [loading, setLoading] = useState(true);
 
-  const filteredUsers = ALL_USERS.filter((u) => {
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const token = localStorage.getItem("token");
+
+        const res = await fetch("http://localhost:5000/api/auth/authUsers/all", {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+
+        const data = await res.json();
+        setUsers(data);
+      } catch (err) {
+        console.error("Error fetching users:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+
+  // FILTERING LOGIC (UPDATED)
+  const filteredUsers = users.filter((u) => {
     const matchesSearch =
-      u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       u.rationId.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesShop = filterShop === 'all' || u.assignedShop === filterShop;
+    const matchesShop = filterShop === 'all' || u.shopNo === filterShop;
 
     return matchesSearch && matchesShop;
   });
 
-  const uniqueShops = Array.from(new Set(ALL_USERS.map(u => u.assignedShop))).sort();
+  const uniqueShops = Array.from(new Set(users.map(u => u.shopNo))).sort();
 
   return (
     <div className="min-h-screen bg-gray-100">
       <Navbar userName={user?.name || "Authority"} role="authority" onLogout={onLogout} />
 
-      {/* FULL WIDTH CONTAINER (LIKE NAVBAR) WITH SMALL MARGIN */}
       <div className="w-full px-6 py-6">
 
-        {/* HEADER - Same as AuthorityDashboard */}
+        {/* HEADER */}
         <div className="bg-gradient-to-r from-purple-600 to-purple-400 rounded-xl p-6 mb-6 shadow-lg w-full">
           <div className="flex items-center space-x-3">
             <Users className="w-8 h-8 text-white" />
@@ -45,13 +61,13 @@ export default function AuthorityUsers({ user, onLogout }) {
           </div>
         </div>
 
-        {/* ONLY ONE CARD - TOTAL USERS (FULLY VISIBLE AND CLEAN) */}
+        {/* TOTAL USERS */}
         <div className="bg-white rounded-xl shadow-md p-6 mb-6 border-l-4 border-purple-500 w-[320px]">
           <p className="text-sm text-gray-600">Total Users</p>
-          <p className="text-3xl font-bold text-gray-900">{ALL_USERS.length}</p>
+          <p className="text-3xl font-bold text-gray-900">{users.length}</p>
         </div>
 
-        {/* FILTER PANEL - NO STATUS FILTER */}
+        {/* FILTER PANEL */}
         <div className="bg-white rounded-xl shadow-md p-6 mb-6 w-full">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
@@ -94,7 +110,7 @@ export default function AuthorityUsers({ user, onLogout }) {
           </div>
         </div>
 
-        {/* USERS TABLE - FULL WIDTH AND CLEAN */}
+        {/* USERS TABLE */}
         <div className="bg-white rounded-xl shadow-md overflow-hidden w-full">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -105,23 +121,20 @@ export default function AuthorityUsers({ user, onLogout }) {
                   <th className="px-6 py-3 text-left text-xs font-semibold text-blue-900 uppercase">Phone</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-blue-900 uppercase">Assigned Shop</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-blue-900 uppercase">Family Size</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-blue-900 uppercase">Action</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-blue-900 uppercase">View Details</th>
                 </tr>
               </thead>
 
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredUsers.map((u) => (
-                  <tr key={u.id} className="hover:bg-blue-50 transition-colors">
+                {filteredUsers.map((u, index) => (
+                  <tr key={index} className="hover:bg-blue-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center">
                         <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                           <Users className="w-5 h-5 text-blue-600" />
                         </div>
                         <div className="ml-4">
-                          <div className="font-medium text-gray-900">{u.name}</div>
-                          <div className="text-xs text-gray-500">
-                            Reg: {new Date(u.registrationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                          </div>
+                          <div className="font-medium text-gray-900">{u.fullName}</div>
                         </div>
                       </div>
                     </td>
@@ -130,16 +143,16 @@ export default function AuthorityUsers({ user, onLogout }) {
                     <td className="px-6 py-4 text-sm text-gray-900">+91 {u.phone}</td>
 
                     <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">{u.assignedShop}</div>
-                      <div className="text-xs text-gray-500">{u.shopName}</div>
+                      <div className="text-sm font-medium text-gray-900">{u.shopNo}</div>
                     </td>
 
                     <td className="px-6 py-4 text-sm text-gray-900">{u.familySize} members</td>
 
+
                     <td className="px-6 py-4 text-sm">
                       <button className="inline-flex items-center space-x-1 text-blue-600 hover:text-blue-800 font-medium">
                         <Eye className="w-4 h-4" />
-                        <span>View</span>
+                        <span>View Details</span>
                       </button>
                     </td>
                   </tr>
@@ -148,7 +161,11 @@ export default function AuthorityUsers({ user, onLogout }) {
             </table>
           </div>
 
-          {filteredUsers.length === 0 && (
+          {loading && (
+            <div className="text-center py-6">Loading users...</div>
+          )}
+
+          {filteredUsers.length === 0 && !loading && (
             <div className="text-center py-12">
               <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-600">No users found</p>
