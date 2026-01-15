@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
-import { Users, Building2, TrendingUp, Package, AlertCircle, CheckCircle } from "lucide-react";
+import { Users, Building2, TrendingUp, Package } from "lucide-react";
 import {
     BarChart,
     Bar,
@@ -14,7 +14,6 @@ import {
     Pie,
     Cell,
 } from "recharts";
-import { jwtDecode } from "jwt-decode";
 
 // Mock Data
 const monthlyDistribution = [
@@ -42,27 +41,19 @@ const pendingActions = [
 export default function AuthorityDashboard() {
     const [user, setUser] = useState(null);
 
-    // Get user info from token
+    // Get user info from localStorage
     useEffect(() => {
-        const token = localStorage.getItem("token");
-        if (token) {
-            try {
-                const decoded = jwtDecode(token);
-                setUser({
-                    name: decoded.name || "Authority",
-                    authorityId: decoded.id,
-                    role: decoded.role,
-                });
-            } catch (err) {
-                console.error("Invalid token", err);
-                localStorage.removeItem("token");
-            }
+        const storedAuthority = localStorage.getItem("authority");
+        if (storedAuthority) {
+            setUser(JSON.parse(storedAuthority)); // now name, mobile, etc. are available
         }
     }, []);
+
 
     // Logout
     const handleLogout = () => {
         localStorage.removeItem("token");
+        localStorage.removeItem("authority");
         window.location.href = "/";
     };
 
@@ -107,7 +98,6 @@ export default function AuthorityDashboard() {
                     </div>
                 </div>
 
-
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                     <div className="bg-white rounded-lg shadow p-4 sm:p-6">
@@ -143,7 +133,6 @@ export default function AuthorityDashboard() {
                     </div>
                 </div>
 
-
                 {/* Pending Complaints */}
                 <div className="mb-8">
                     <h2 className="text-xl font-bold text-gray-900 mb-4">Pending Actions Required</h2>
@@ -164,8 +153,6 @@ export default function AuthorityDashboard() {
                         ))}
                     </div>
                 </div>
-
-
 
                 {/* Monthly Distribution Chart */}
                 <div className="bg-white rounded-lg shadow p-6 mb-8">

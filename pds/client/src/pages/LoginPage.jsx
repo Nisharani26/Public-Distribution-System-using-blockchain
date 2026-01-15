@@ -51,40 +51,38 @@ export default function LoginPage() {
             return;
         }
 
-       if (role === "authority") {
-    try {
-        const res = await fetch("http://localhost:5000/api/auth/authority/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ authorityId: userId, password }),
-        });
+        if (role === "authority") {
+            try {
+                const res = await fetch("http://localhost:5000/api/auth/authority/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ authorityId: userId, password }),
+                });
 
-        console.log("Response status:", res.status);
+                console.log("Response status:", res.status);
 
-        const data = await res.json();
-        console.log("Response data:", data);
+                const data = await res.json();
+                console.log("Response data:", data);
 
-        if (!res.ok) {
-            setError(data.message || "Login failed");
+                if (!res.ok) {
+                    setError(data.message || "Login failed");
+                    return;
+                }
+
+                localStorage.setItem("token", data.token);
+                localStorage.setItem("authority", JSON.stringify(data.authority)); // <-- FIXED
+                setPendingUser(data.authority);
+                setRedirectToAuthority(true);
+
+            } catch (err) {
+                console.error("Fetch error:", err);
+                setError("Server error. Try again.");
+            }
+
             return;
         }
-
-        localStorage.setItem("token", data.token);
-        setPendingUser(data.authority);
-        setRedirectToAuthority(true);
-
-    } catch (err) {
-        console.error("Fetch error:", err);
-        setError("Server error. Try again.");
-    }
-
-    return;
-}
-
-
         setError("Only authority login is supported for now.");
     };
-
     const handleOTPVerify = () => {
         if (pendingUser?.isFirstLogin) {
             setShowOTP(false);
