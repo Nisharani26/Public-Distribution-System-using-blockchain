@@ -1,100 +1,109 @@
-const mongoose = require("mongoose");
-const Authority = require("../models/Authority"); // points to authorityLogins collection
+const { AuthorityLogin, AuthorityProfile } = require("../models/Authority");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
-// LOGIN
+const otpStore = new Map();
+
+/* =======================
+   STEP 1: LOGIN (PASSWORD)
+======================= */
 exports.authorityLogin = async (req, res) => {
   const { authorityId, password } = req.body;
-
   try {
-    // Lookup authority profile using authorityId
-    const authorityData = await Authority.aggregate([
-      { $match: { authorityId } }, // match login collection
-      {
-        $lookup: {
-          from: "authorityProfiles", // collection name for profile
-          localField: "authorityId",
-          foreignField: "authorityId",
-          as: "profile"
-        }
-      },
-      { $unwind: { path: "$profile", preserveNullAndEmptyArrays: true } } // flatten the profile array
-    ]);
+    const login = await AuthorityLogin.findOne({ authorityId });
+    if (!login) return res.status(401).json({ message: "Invalid credentials" });
 
-    const authority = authorityData[0];
+    const isMatch = await bcrypt.compare(password, login.password);
+    if (!isMatch) return res.status(401).json({ message: "Invalid credentials" });
 
-    console.log("Found authority:", authority);
-
-    if (!authority) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    // Compare password from login collection
-    const isMatch = await bcrypt.compare(password, authority.password);
-    if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    const token = jwt.sign(
-      { id: authority._id, authorityId: authority.authorityId, role: "AUTHORITY" ,name: authority.name},
-      process.env.JWT_SECRET,
-      { expiresIn: "1d" }
-    );
+    const profile = await AuthorityProfile.findOne({ authorityId });
 
     res.json({
-      token,
-      authority: {
-        authorityId: authority.authorityId,
-        mobile: authority.mobile,
-        name: authority.profile?.name || "Authority", // get name from profile
-        designation: authority.profile?.designation || "",
-        district: authority.profile?.district || "",
-        state: authority.profile?.state || "",
-        email: authority.profile?.email || ""
-      }
+      message: "Password verified. Proceed to OTP.",
+      authorityId: login.authorityId,
+      mobile: login.mobile,
+      name: profile?.name || login.authorityId, // fetch real name
     });
-
   } catch (err) {
     console.error("Login error:", err);
     res.status(500).json({ message: "Server error. Try again." });
   }
 };
 
-// GET DASHBOARD DATA
+/* =======================
+   STEP 2: SEND OTP
+======================= */
+exports.sendAuthorityOTP = async (req, res) => {
+  const { authorityId } = req.body;
+  try {
+    const login = await AuthorityLogin.findOne({ authorityId });
+    if (!login) return res.status(404).json({ message: "Authority not found" });
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    otpStore.set(authorityId, { otp, expiresAt: Date.now() + 5 * 60 * 1000 });
+
+    console.log(`✅ OTP for ${authorityId}: ${otp}`);
+    res.json({ message: "OTP sent successfully" });
+  } catch (err) {
+    console.error("OTP Error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+/* =======================
+   STEP 3: VERIFY OTP
+======================= */
+exports.verifyAuthorityOTP = async (req, res) => {
+  const { authorityId, otp } = req.body;
+
+  const storedData = otpStore.get(authorityId);
+  if (!storedData) return res.status(400).json({ message: "OTP expired or not sent" });
+  if (Date.now() > storedData.expiresAt) {
+    otpStore.delete(authorityId);
+    return res.status(400).json({ message: "OTP expired" });
+  }
+  if (storedData.otp !== otp) return res.status(401).json({ message: "Invalid OTP" });
+
+  const login = await AuthorityLogin.findOne({ authorityId });
+  if (!login) return res.status(404).json({ message: "Authority not found" });
+
+  const token = jwt.sign(
+    { authorityId: login.authorityId, role: "AUTHORITY" },
+    process.env.JWT_SECRET,
+    { expiresIn: "1d" }
+  );
+
+  otpStore.delete(authorityId);
+  console.log(`✅ OTP verified successfully for ${authorityId}`);
+  res.json({ message: "OTP verified successfully", token });
+};
+
+/* =======================
+   DASHBOARD DATA
+======================= */
 exports.getAuthorityData = async (req, res) => {
   try {
     const authorityId = req.authority.authorityId;
 
-    // Fetch authority login + profile data
-    const authorityData = await Authority.aggregate([
-      { $match: { authorityId } },
-      {
-        $lookup: {
-          from: "authorityProfiles",
-          localField: "authorityId",
-          foreignField: "authorityId",
-          as: "profile"
-        }
-      },
-      { $unwind: { path: "$profile", preserveNullAndEmptyArrays: true } }
-    ]);
+    const login = await AuthorityLogin.findOne({ authorityId });
+    const profile = await AuthorityProfile.findOne({ authorityId });
 
-    const authority = authorityData[0];
+    if (!login) return res.status(404).json({ message: "Authority not found" });
+
+    const fullData = {
+      authorityId: login.authorityId,
+      mobile: login.mobile,
+      name: profile?.name || login.authorityId,
+      designation: profile?.designation || "",
+      district: profile?.district || "",
+      state: profile?.state || "",
+      email: profile?.email || ""
+    };
 
     res.json({
-      message: `Welcome ${authority.profile?.name || authority.authorityId}`,
-      authority: {
-        authorityId: authority.authorityId,
-        mobile: authority.mobile,
-        name: authority.profile?.name || "",
-        designation: authority.profile?.designation || "",
-        district: authority.profile?.district || "",
-        state: authority.profile?.state || "",
-        email: authority.profile?.email || ""
-      }
+      message: `Welcome ${fullData.name}`,
+      authority: fullData
     });
-
   } catch (err) {
     console.error("Error fetching authority data:", err);
     res.status(500).json({ message: "Server error" });

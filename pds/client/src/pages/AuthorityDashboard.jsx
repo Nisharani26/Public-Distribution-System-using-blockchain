@@ -41,13 +41,50 @@ const pendingActions = [
 export default function AuthorityDashboard() {
     const [user, setUser] = useState(null);
 
-    // Get user info from localStorage
-    useEffect(() => {
-        const storedAuthority = localStorage.getItem("authority");
-        if (storedAuthority) {
-            setUser(JSON.parse(storedAuthority)); // now name, mobile, etc. are available
+   useEffect(() => {
+    const storedAuthority = localStorage.getItem("authority");
+    if (storedAuthority) {
+        setUser(JSON.parse(storedAuthority));
+    }
+
+    const fetchAuthorityData = async () => {
+        const token = localStorage.getItem("token");
+        console.log("Fetching dashboard with token:", token); // Add this log
+
+        if (!token) {
+            console.error("No token found");
+            return;
         }
-    }, []);
+
+        try {
+            const res = await fetch("http://localhost:5000/api/auth/authority/dashboard", {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}` // Make sure 'Bearer ' is included
+                }
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                console.error("Dashboard error:", data);
+                return;
+            }
+
+            // Update localStorage & state
+            localStorage.setItem("authority", JSON.stringify(data.authority));
+            setUser(data.authority);
+
+            console.log("Dashboard data fetched:", data.authority); // Debug info
+
+        } catch (err) {
+            console.error("Dashboard fetch error:", err);
+        }
+    };
+
+    fetchAuthorityData();
+}, []);
 
 
     // Logout
@@ -69,15 +106,16 @@ export default function AuthorityDashboard() {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            <Navbar userName={user.name} role="authority" onLogout={handleLogout} />
+            <Navbar userName={user.name || user.authorityId} role="authority" onLogout={handleLogout} />
 
             <div className="max-w-full px-4 sm:px-6 lg:px-8 py-8">
                 {/* Welcome Section */}
                 <div className="bg-gradient-to-r from-purple-500 to-purple-400 rounded-xl p-6 mb-8 shadow-lg flex flex-col sm:flex-row items-center justify-between">
                     <div>
-                        <h1 className="text-3xl sm:text-4xl font-extrabold text-white mb-2 drop-shadow-lg">
+                        <h1 className="text-3xl sm:text-4xl font-extrabold text-white mb-2">
                             Welcome, {user.name}!
                         </h1>
+
                         <p className="text-white/90 text-sm sm:text-base drop-shadow-sm">
                             District Overview:{" "}
                             <span className="font-semibold">
@@ -141,10 +179,10 @@ export default function AuthorityDashboard() {
                             <div
                                 key={complaint.id}
                                 className={`p-5 rounded-xl border-l-4 shadow-md flex flex-col justify-center ${complaint.status === "pending"
-                                        ? "border-blue-400 bg-blue-50 text-blue-800"
-                                        : complaint.status === "warning"
-                                            ? "border-amber-400 bg-amber-50 text-amber-800"
-                                            : "border-red-400 bg-red-50 text-red-800"
+                                    ? "border-blue-400 bg-blue-50 text-blue-800"
+                                    : complaint.status === "warning"
+                                        ? "border-amber-400 bg-amber-50 text-amber-800"
+                                        : "border-red-400 bg-red-50 text-red-800"
                                     } hover:scale-105 transition-transform duration-300`}
                             >
                                 <p className="font-semibold text-base sm:text-lg">{complaint.title}</p>

@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 
-const AuthoritySchema = new mongoose.Schema({
+// ----- LOGIN SCHEMA -----
+const AuthorityLoginSchema = new mongoose.Schema({
   authorityId: {
     type: String,
     required: true,
@@ -17,9 +18,16 @@ const AuthoritySchema = new mongoose.Schema({
   role: {
     type: String,
     default: "AUTHORITY"
-  },
+  }
+});
 
-  // ---- PROFILE PART (previously in authorityProfiles) ----
+// ----- PROFILE SCHEMA -----
+const AuthorityProfileSchema = new mongoose.Schema({
+  authorityId: {
+    type: String,
+    required: true,
+    unique: true
+  },
   name: {
     type: String
   },
@@ -37,4 +45,21 @@ const AuthoritySchema = new mongoose.Schema({
   }
 });
 
-module.exports = mongoose.model("Authority", AuthoritySchema, "authorityLogins");
+// ----- CREATE MODELS -----
+const AuthorityLogin = mongoose.model(
+  "AuthorityLogin",
+  AuthorityLoginSchema,
+  "authorityLogins"
+);
+
+const AuthorityProfile = mongoose.model(
+  "AuthorityProfile",
+  AuthorityProfileSchema,
+  "authorityProfiles"
+);
+
+// ----- EXPORT BOTH MODELS -----
+module.exports = {
+  AuthorityLogin,
+  AuthorityProfile
+};

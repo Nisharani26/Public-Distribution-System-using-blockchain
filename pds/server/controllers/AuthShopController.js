@@ -25,7 +25,7 @@ exports.getAllAuthShops = async (req, res) => {
       };
     });
 
-    console.log("Combined shops:", shops);
+    // console.log("Combined shops:", shops);
 
     res.status(200).json(shops);
   } catch (err) {
