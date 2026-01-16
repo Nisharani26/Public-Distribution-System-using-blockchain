@@ -13,7 +13,7 @@ const ALL_TRANSACTIONS = [
   { id: 8, date: '2025-11-22', item: 'Sugar', weight: 1, amount: 5, smsStatus: 'Sent', blockchainHash: '0x5c7b2f...9e8d' },
 ];
 
-export default function UserTransactionHistory({ user, onLogout }) {
+export default function CitizenTransactionHistory({ user, onLogout }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('all');
 

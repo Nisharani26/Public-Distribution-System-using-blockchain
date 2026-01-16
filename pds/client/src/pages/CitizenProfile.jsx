@@ -2,7 +2,7 @@ import React from 'react';
 import Navbar from './Navbar';
 import { User, Phone, IdCard, Store, MapPin, Calendar } from 'lucide-react';
 
-export default function UserProfile({ user, onLogout }) {
+export default function CitizenProfile({ user, onLogout }) {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar userName={user.name} role="user" onLogout={onLogout} />
