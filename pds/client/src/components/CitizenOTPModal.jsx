@@ -2,12 +2,12 @@ import React, { useState, useRef, useEffect } from "react";
 import { X, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 
-export default function OTPModal({ phone, authorityId, onVerify, onClose }) {
+export default function CitizenOTPModal({ phone, rationId, onVerify, onClose }) {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [timer, setTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState(""); // ✅ For browser error
+  const [errorMessage, setErrorMessage] = useState("");
   const inputRefs = useRef([]);
 
   useEffect(() => {
@@ -28,10 +28,12 @@ export default function OTPModal({ phone, authorityId, onVerify, onClose }) {
   const handleChange = (index, value) => {
     if (value.length > 1) return;
     if (value && !/^\d$/.test(value)) return;
+
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
-    setErrorMessage(""); // ✅ Clear error while typing
+    setErrorMessage("");
+
     if (value && index < 5) inputRefs.current[index + 1]?.focus();
   };
 
@@ -49,22 +51,22 @@ export default function OTPModal({ phone, authorityId, onVerify, onClose }) {
     }
 
     setLoading(true);
-    setErrorMessage(""); // Clear previous error
+    setErrorMessage("");
 
     try {
       const res = await fetch(
-        "http://localhost:5000/api/auth/authority/verify-otp",
+        "http://localhost:5000/api/auth/citizen/verify-otp",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ authorityId, otp: otpValue }),
+          body: JSON.stringify({ rationId, otp: otpValue }),
         }
       );
 
       const data = await res.json();
 
       if (!res.ok) {
-        setErrorMessage(data.message || "Invalid OTP"); // ✅ Show in browser
+        setErrorMessage(data.message || "Invalid OTP");
         setOtp(["", "", "", "", "", ""]);
         inputRefs.current[0]?.focus();
         setLoading(false);
@@ -75,12 +77,12 @@ export default function OTPModal({ phone, authorityId, onVerify, onClose }) {
         toast.success("OTP verified successfully!");
         onVerify(data.token);
       } else {
-        setErrorMessage(data.message || "Invalid OTP"); // ✅ Show in browser
+        setErrorMessage(data.message || "Invalid OTP");
         setOtp(["", "", "", "", "", ""]);
         inputRefs.current[0]?.focus();
       }
     } catch (error) {
-      setErrorMessage("OTP verification failed"); // ✅ Show in browser
+      setErrorMessage("OTP verification failed");
       setOtp(["", "", "", "", "", ""]);
       inputRefs.current[0]?.focus();
     }
@@ -93,21 +95,25 @@ export default function OTPModal({ phone, authorityId, onVerify, onClose }) {
     setCanResend(false);
     setOtp(["", "", "", "", "", ""]);
     inputRefs.current[0]?.focus();
-    setErrorMessage(""); // Clear error on resend
+    setErrorMessage("");
+
     try {
       const res = await fetch(
-        "http://localhost:5000/api/auth/authority/send-otp",
+        "http://localhost:5000/api/citizen/send-otp",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ authorityId }),
+          body: JSON.stringify({ rationId }),
         }
       );
+
       const data = await res.json();
+
       if (!res.ok) {
         setErrorMessage(data.message || "Failed to resend OTP");
         return;
       }
+
       toast.success("OTP resent successfully!");
     } catch (err) {
       setErrorMessage("Failed to resend OTP");
@@ -166,9 +172,10 @@ export default function OTPModal({ phone, authorityId, onVerify, onClose }) {
           ))}
         </div>
 
-        {/* ✅ Display error in browser */}
         {errorMessage && (
-          <p className="text-center text-red-600 mb-4 font-medium">{errorMessage}</p>
+          <p className="text-center text-red-600 mb-4 font-medium">
+            {errorMessage}
+          </p>
         )}
 
         <div className="text-center mb-6">

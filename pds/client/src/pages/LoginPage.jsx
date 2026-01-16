@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Building2 } from "lucide-react";
-import OTPModal from "../components/OTPModal";
+import AuthorityOTPModal from "../components/AuthorityOTPModal";
+import CitizenOTPModal from "../components/CitizenOTPModal";
 import PasswordSetupModal from "../components/PasswordSetupModal";
 import { Link } from "react-router-dom";
 
@@ -10,10 +11,10 @@ export default function LoginPage({ onLogin }) {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [showOTP, setShowOTP] = useState(false);
+  const [showCitizenOTP, setShowCitizenOTP] = useState(false);
   const [showPasswordSetup, setShowPasswordSetup] = useState(false);
   const [pendingUser, setPendingUser] = useState(null);
-  const [pendingAuthorityId, setPendingAuthorityId] = useState(null);
-  const [pendingAuthorityName, setPendingAuthorityName] = useState(null);
+  const [pendingCitizen, setPendingCitizen] = useState(null);
   const [error, setError] = useState("");
   const [redirectToAuthority, setRedirectToAuthority] = useState(false);
 
@@ -43,16 +44,12 @@ export default function LoginPage({ onLogin }) {
       return;
     }
 
-    if (role !== "authority" && !phoneRegex.test(phone)) {
-      setError("Mobile number must be 10 digits");
-      return;
-    }
-
     if (role === "authority" && !passwordRegex.test(password)) {
       setError("Password must be at least 8 characters");
       return;
     }
 
+    // ===== AUTHORITY LOGIN =====
     if (role === "authority") {
       try {
         const res = await fetch("http://localhost:5000/api/auth/authority/login", {
@@ -60,16 +57,11 @@ export default function LoginPage({ onLogin }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ authorityId: userId, password }),
         });
-
         const data = await res.json();
-
         if (!res.ok) {
           setError(data.message || "Login failed");
           return;
         }
-
-        setPendingAuthorityId(data.authorityId);
-        setPendingAuthorityName(data.name);
 
         setPendingUser({
           authorityId: data.authorityId,
@@ -91,34 +83,67 @@ export default function LoginPage({ onLogin }) {
       return;
     }
 
-    setError("Only authority login is supported for now.");
+    // ===== CITIZEN LOGIN =====
+    if (role === "user") {
+      try {
+        const res = await fetch("http://localhost:5000/api/citizen/send-otp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rationId: userId ,phone}),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setError(data.message || "Failed to send OTP");
+          return;
+        }
+
+        setPendingCitizen({
+          rationId: data.rationId,
+          name: data.name,
+          mobile: data.phone,
+          assignedShop: data.assignedShop || "Not Assigned",
+        });
+
+        setShowCitizenOTP(true);
+      } catch (err) {
+        console.error(err);
+        setError("Server error. Try again.");
+      }
+      return;
+    }
+
+    setError("Only Citizen and Authority login supported for now.");
   };
 
-const handleOTPVerify = (token) => {
-  console.log("✅ Received verified token:", token);
+  // ===== AUTHORITY OTP VERIFY =====
+  const handleOTPVerify = (token) => {
+    localStorage.setItem("token", token);
+    if (pendingUser) {
+      localStorage.setItem(
+        "authority",
+        JSON.stringify(pendingUser)
+      );
+    }
+    setShowOTP(false);
+    setRedirectToAuthority(true);
+  };
 
-  // Store the token in localStorage
-  localStorage.setItem("token", token);
-
-  // Store authority details from pendingUser
-  if (pendingUser) {
-    localStorage.setItem(
-      "authority",
-      JSON.stringify({
-        authorityId: pendingUser.authorityId,
-        name: pendingUser.name,
-        mobile: pendingUser.mobile
-      })
-    );
-  }
-
-  console.log("Authority details after OTP verification:", pendingUser);
-
-  setShowOTP(false);
-  setRedirectToAuthority(true);
-};
-
-
+  // ===== CITIZEN OTP VERIFY =====
+  const handleCitizenOTPVerify = (token) => {
+    localStorage.setItem("token", token);
+    if (pendingCitizen) {
+      localStorage.setItem(
+        "citizen",
+        JSON.stringify(pendingCitizen)
+      );
+    }
+    setShowCitizenOTP(false);
+    onLogin &&
+      onLogin({
+        role: "user",
+        ...pendingCitizen,
+      });
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-blue-100 px-4">
@@ -141,13 +166,7 @@ const handleOTPVerify = (token) => {
 
           <input
             type="text"
-            placeholder={
-              role === "user"
-                ? "12-digit Ration Card No"
-                : role === "shopkeeper"
-                ? "12-digit Shop No"
-                : "Authority ID (6 chars)"
-            }
+            placeholder={role === "user" ? "12-digit Ration Card No" : "Authority ID / Shop No"}
             value={userId}
             onChange={(e) => {
               const value = e.target.value;
@@ -160,7 +179,7 @@ const handleOTPVerify = (token) => {
           {role !== "authority" && (
             <input
               type="text"
-              placeholder="10-digit Phone Number"
+              placeholder="10-digit Phone Number (Optional)"
               value={phone}
               onChange={(e) => {
                 if (/^\d*$/.test(e.target.value) && e.target.value.length <= 10) {
@@ -190,11 +209,20 @@ const handleOTPVerify = (token) => {
       </div>
 
       {showOTP && pendingUser && (
-        <OTPModal
+        <AuthorityOTPModal
           phone={pendingUser.mobile}
           authorityId={pendingUser.authorityId}
           onVerify={handleOTPVerify}
           onClose={() => setShowOTP(false)}
+        />
+      )}
+
+      {showCitizenOTP && pendingCitizen && (
+        <CitizenOTPModal
+          phone={pendingCitizen.mobile}
+          rationId={pendingCitizen.rationId}
+          onVerify={handleCitizenOTPVerify}
+          onClose={() => setShowCitizenOTP(false)}
         />
       )}
 
@@ -206,11 +234,7 @@ const handleOTPVerify = (token) => {
       )}
 
       {redirectToAuthority && (
-        <Link
-          to="/authority/dashboard"
-          style={{ display: "none" }}
-          id="redirect-link"
-        />
+        <Link to="/authority/dashboard" style={{ display: "none" }} id="redirect-link" />
       )}
     </div>
   );

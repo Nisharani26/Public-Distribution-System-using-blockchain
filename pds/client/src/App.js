@@ -6,6 +6,9 @@ import AuthorityUsers from './pages/AuthorityUsers';
 import AuthorityShops from './pages/AuthorityShops';
 import AuthorityRequests from './pages/AuthorityRequests';
 import AuthorityAudit from './pages/AuthorityAudit';
+import CitizenDashboard from './pages/CitizenDashboard';
+import CitizenProfile from './pages/CitizenProfile';
+import CitizenTransactionHistory from './pages/CitizenTransactionHistory';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -19,9 +22,9 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         {/* Login page */}
-        <Route 
-          path="/" 
-          element={<LoginPage onLogin={(loggedInUser) => setUser(loggedInUser)} />} 
+        <Route
+          path="/"
+          element={<LoginPage onLogin={(loggedInUser) => setUser(loggedInUser)} />}
         />
 
         {/* Authority pages */}
@@ -51,7 +54,26 @@ export default function App() {
           path="*"
           element={user ? <Navigate to="/authority/dashboard" replace /> : <Navigate to="/" replace />}
         />
+        <Route
+          path="/citizen/dashboard"
+          element={<CitizenDashboard user={user} onLogout={handleLogout} />}
+        />
+        <Route
+          path="/citizen/profile"
+          element={<CitizenProfile user={user} onLogout={handleLogout} />}
+        />
+        <Route
+          path="/citizen/transactions"
+          element={<CitizenTransactionHistory user={user} onLogout={handleLogout} />}
+        />
+        {/* Catch-all: redirect unknown routes for citizen */}
+        <Route
+          path="*"
+          element={user ? <Navigate to="/citizen/dashboard" replace /> : <Navigate to="/" replace />}
+        />
+
       </Routes>
+
     </BrowserRouter>
   );
 }

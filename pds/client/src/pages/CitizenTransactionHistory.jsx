@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Navbar from './Navbar';
+import Navbar from "../components/Navbar";
 import { History, Download, Search, CheckCircle, Shield } from 'lucide-react';
 
 const ALL_TRANSACTIONS = [

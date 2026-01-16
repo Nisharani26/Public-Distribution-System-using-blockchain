@@ -1,5 +1,5 @@
 import React from 'react';
-import Navbar from './Navbar';
+import Navbar from "../components/Navbar";
 import { User, Phone, IdCard, Store, MapPin, Calendar } from 'lucide-react';
 
 export default function CitizenProfile({ user, onLogout }) {
