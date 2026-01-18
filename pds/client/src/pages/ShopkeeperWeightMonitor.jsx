@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import Navbar from './Navbar';
+import Navbar from "../components/Navbar";
 import { Scale, User, Package, DollarSign, CheckCircle, MessageSquare, Shield } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 const USERS_LIST = [
   { rationId: 'RAT123456', name: 'Rajesh Kumar' },
@@ -80,7 +80,7 @@ export default function ShopkeeperWeightMonitor({ user, onLogout }) {
     <div className="min-h-screen bg-gray-50">
       <Navbar userName={user.name} role="shopkeeper" onLogout={onLogout} />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-full px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center space-x-3 mb-2">

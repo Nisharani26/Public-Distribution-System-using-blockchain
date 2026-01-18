@@ -41,28 +41,30 @@ export default function Navbar({ userName, role, onLogout }) {
   ];
 
   const links =
-    role === "user"
+    role === "citizen"
       ? userLinks
       : role === "shopkeeper"
       ? shopkeeperLinks
       : authorityLinks;
 
   const getRoleColor = () => {
-    if (role === "user") return "bg-blue-600";
+    if (role === "citizen") return "bg-blue-600";
     if (role === "shopkeeper") return "bg-green-600";
     return "bg-purple-600";
   };
 
   const getRoleName = () => {
-    if (role === "user") return "Citizen Portal";
+    if (role === "citizen") return "Citizen Portal";
     if (role === "shopkeeper") return "Shopkeeper Portal";
     return "Authority Portal";
   };
 
-  // ✅ FIXED LOGOUT FUNCTION
+  // ✅ FIXED LOGOUT FUNCTION (all roles)
   const handleLogoutClick = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("citizen");
+    localStorage.removeItem("shopkeeper");
+    localStorage.removeItem("authority");
 
     if (onLogout) {
       onLogout();
@@ -104,7 +106,7 @@ export default function Navbar({ userName, role, onLogout }) {
               );
             })}
 
-            {/* ✅ LOGOUT BUTTON (FIXED) */}
+            {/* LOGOUT BUTTON */}
             <Link
               to="/"
               onClick={handleLogoutClick}
@@ -146,7 +148,7 @@ export default function Navbar({ userName, role, onLogout }) {
               );
             })}
 
-            {/* ✅ MOBILE LOGOUT (FIXED) */}
+            {/* MOBILE LOGOUT */}
             <Link
               to="/"
               onClick={handleLogoutClick}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Building2 } from "lucide-react";
 import AuthorityOTPModal from "../components/AuthorityOTPModal";
 import CitizenOTPModal from "../components/CitizenOTPModal";
+import ShopkeeperOTPModal from "../components/ShopkeeperOTPModal"; // ✅ new
 import PasswordSetupModal from "../components/PasswordSetupModal";
 import { Link } from "react-router-dom";
 
@@ -12,9 +13,11 @@ export default function LoginPage({ onLogin }) {
   const [password, setPassword] = useState("");
   const [showOTP, setShowOTP] = useState(false);
   const [showCitizenOTP, setShowCitizenOTP] = useState(false);
+  const [showShopkeeperOTP, setShowShopkeeperOTP] = useState(false); // ✅ new
   const [showPasswordSetup, setShowPasswordSetup] = useState(false);
   const [pendingUser, setPendingUser] = useState(null);
   const [pendingCitizen, setPendingCitizen] = useState(null);
+  const [pendingShopkeeper, setPendingShopkeeper] = useState(null); // ✅ new
   const [error, setError] = useState("");
   const [redirectToAuthority, setRedirectToAuthority] = useState(false);
 
@@ -89,7 +92,7 @@ export default function LoginPage({ onLogin }) {
         const res = await fetch("http://localhost:5000/api/citizen/send-otp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ rationId: userId ,phone}),
+          body: JSON.stringify({ rationId: userId, phone }),
         });
         const data = await res.json();
         if (!res.ok) {
@@ -112,17 +115,41 @@ export default function LoginPage({ onLogin }) {
       return;
     }
 
-    setError("Only Citizen and Authority login supported for now.");
+    // ===== SHOPKEEPER LOGIN =====
+    if (role === "shopkeeper") {
+      try {
+        const res = await fetch("http://localhost:5000/api/shopkeeper/send-otp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ shopNo: userId, phone }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setError(data.message || "Failed to send OTP");
+          return;
+        }
+
+        setPendingShopkeeper({
+          shopNo: data.shopNo,
+          shopName: data.shopName,
+          shopOwnerName: data.shopOwnerName,
+          phone: data.phone,
+        });
+
+        setShowShopkeeperOTP(true);
+      } catch (err) {
+        console.error(err);
+        setError("Server error. Try again.");
+      }
+      return;
+    }
   };
 
   // ===== AUTHORITY OTP VERIFY =====
   const handleOTPVerify = (token) => {
     localStorage.setItem("token", token);
     if (pendingUser) {
-      localStorage.setItem(
-        "authority",
-        JSON.stringify(pendingUser)
-      );
+      localStorage.setItem("authority", JSON.stringify(pendingUser));
     }
     setShowOTP(false);
     setRedirectToAuthority(true);
@@ -132,16 +159,27 @@ export default function LoginPage({ onLogin }) {
   const handleCitizenOTPVerify = (token) => {
     localStorage.setItem("token", token);
     if (pendingCitizen) {
-      localStorage.setItem(
-        "citizen",
-        JSON.stringify(pendingCitizen)
-      );
+      localStorage.setItem("citizen", JSON.stringify(pendingCitizen));
     }
     setShowCitizenOTP(false);
     onLogin &&
       onLogin({
         role: "user",
         ...pendingCitizen,
+      });
+  };
+
+  // ===== SHOPKEEPER OTP VERIFY =====
+  const handleShopkeeperOTPVerify = (token) => {
+    localStorage.setItem("token", token);
+    if (pendingShopkeeper) {
+      localStorage.setItem("shopkeeper", JSON.stringify(pendingShopkeeper));
+    }
+    setShowShopkeeperOTP(false);
+    onLogin &&
+      onLogin({
+        role: "shopkeeper",
+        ...pendingShopkeeper,
       });
   };
 
@@ -166,7 +204,7 @@ export default function LoginPage({ onLogin }) {
 
           <input
             type="text"
-            placeholder={role === "user" ? "12-digit Ration Card No" : "Authority ID / Shop No"}
+            placeholder={role === "user" ? "12-digit Ration Card No" : "Authority / Shop No"}
             value={userId}
             onChange={(e) => {
               const value = e.target.value;
@@ -223,6 +261,15 @@ export default function LoginPage({ onLogin }) {
           rationId={pendingCitizen.rationId}
           onVerify={handleCitizenOTPVerify}
           onClose={() => setShowCitizenOTP(false)}
+        />
+      )}
+
+      {showShopkeeperOTP && pendingShopkeeper && (
+        <ShopkeeperOTPModal
+          phone={pendingShopkeeper.phone}
+          shopNo={pendingShopkeeper.shopNo}
+          onVerify={handleShopkeeperOTPVerify}
+          onClose={() => setShowShopkeeperOTP(false)}
         />
       )}
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Navbar from './Navbar';
+import Navbar from "../components/Navbar";
 import { History, Download, Search, Filter, CheckCircle, Shield } from 'lucide-react';
 
 const ALL_TRANSACTIONS = [
@@ -36,7 +36,7 @@ export default function ShopkeeperTransactionHistory({ user, onLogout }) {
     <div className="min-h-screen bg-gray-50">
       <Navbar userName={user.name} role="shopkeeper" onLogout={onLogout} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-full px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center space-x-3 mb-2">
