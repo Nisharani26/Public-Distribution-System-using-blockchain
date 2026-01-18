@@ -55,7 +55,7 @@ export default function CitizenOTPModal({ phone, rationId, onVerify, onClose }) 
 
     try {
       const res = await fetch(
-        "http://localhost:5000/api/auth/citizen/verify-otp",
+        "http://localhost:5000/api/citizen/verify-otp",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

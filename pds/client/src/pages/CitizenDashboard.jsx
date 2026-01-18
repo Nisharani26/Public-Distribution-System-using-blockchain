@@ -18,23 +18,31 @@ const RECENT_TRANSACTIONS = [
 ];
 
 export default function CitizenDashboard({ user, onLogout }) {
+
+  // ✅ IMPORTANT FIX: Load user from localStorage if page is refreshed
+  const storedUser = localStorage.getItem("citizen")
+    ? JSON.parse(localStorage.getItem("citizen"))
+    : null;
+
+  const finalUser = user || storedUser;
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar 
-        userName={user?.name || "Citizen"} 
+        userName={finalUser?.name || "Citizen"} 
         role="user" 
         onLogout={onLogout} 
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-full px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome, {user?.name || "Citizen"}!
+            Welcome, {finalUser?.name || "Citizen"}!
           </h1>
           <p className="text-gray-600">
-            Ration Card: <span className="font-medium">{user?.rationId || "N/A"}</span> • 
-            Assigned Shop: <span className="font-medium">{user?.assignedShop || "Not Assigned"}</span>
+            Ration Card: <span className="font-medium">{finalUser?.rationId || "N/A"}</span> • 
+            Assigned Shop: <span className="font-medium">{finalUser?.assignedShop || "Not Assigned"}</span>
           </p>
         </div>
 
@@ -129,7 +137,7 @@ export default function CitizenDashboard({ user, onLogout }) {
                 <p className="text-sm text-gray-600 mt-1">Your last 3 distributions</p>
               </div>
               <Link
-                to="/user/transactions"
+                to="/citizen/transactions"
                 className="text-blue-600 hover:text-blue-700 text-sm font-medium"
               >
                 View All

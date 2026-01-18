@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from './pages/LoginPage';
 import AuthorityDashboard from './pages/AuthorityDashboard';
@@ -11,9 +11,14 @@ import CitizenProfile from './pages/CitizenProfile';
 import CitizenTransactionHistory from './pages/CitizenTransactionHistory';
 
 export default function App() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    const stored = localStorage.getItem("citizen");
+    return stored ? JSON.parse(stored) : null;
+  });
 
   const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("citizen");
     setUser(null);
     console.log("Logged out");
   };
@@ -21,13 +26,17 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Login page */}
+        {/* LOGIN ROUTE (auto-redirect if already logged in) */}
         <Route
           path="/"
-          element={<LoginPage onLogin={(loggedInUser) => setUser(loggedInUser)} />}
+          element={
+            user
+              ? <Navigate to="/citizen/dashboard" replace />
+              : <LoginPage onLogin={(loggedInUser) => setUser(loggedInUser)} />
+          }
         />
 
-        {/* Authority pages */}
+        {/* AUTHORITY ROUTES */}
         <Route
           path="/authority/dashboard"
           element={<AuthorityDashboard user={user} onLogout={handleLogout} />}
@@ -49,31 +58,36 @@ export default function App() {
           element={<AuthorityAudit user={user} onLogout={handleLogout} />}
         />
 
-        {/* Catch-all: redirect unknown routes to dashboard if logged in, otherwise login */}
-        <Route
-          path="*"
-          element={user ? <Navigate to="/authority/dashboard" replace /> : <Navigate to="/" replace />}
-        />
+        {/* CITIZEN ROUTES */}
         <Route
           path="/citizen/dashboard"
-          element={<CitizenDashboard user={user} onLogout={handleLogout} />}
+          element={
+            localStorage.getItem("token")
+              ? <CitizenDashboard user={user} onLogout={handleLogout} />
+              : <Navigate to="/" replace />
+          }
         />
+
         <Route
           path="/citizen/profile"
           element={<CitizenProfile user={user} onLogout={handleLogout} />}
         />
+
         <Route
           path="/citizen/transactions"
           element={<CitizenTransactionHistory user={user} onLogout={handleLogout} />}
         />
-        {/* Catch-all: redirect unknown routes for citizen */}
+
+        {/* SINGLE catch-all (VERY IMPORTANT) */}
         <Route
           path="*"
-          element={user ? <Navigate to="/citizen/dashboard" replace /> : <Navigate to="/" replace />}
+          element={
+            localStorage.getItem("token")
+              ? <Navigate to="/citizen/dashboard" replace />
+              : <Navigate to="/" replace />
+          }
         />
-
       </Routes>
-
     </BrowserRouter>
   );
 }

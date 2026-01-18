@@ -15,14 +15,14 @@ import {
   X
 } from "lucide-react";
 
-export default function Navbar({ userName, role }) {
+export default function Navbar({ userName, role, onLogout }) {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const userLinks = [
-    { path: "/user/dashboard", label: "Dashboard", icon: Home },
-    { path: "/user/transactions", label: "Transaction History", icon: History },
-    { path: "/user/profile", label: "Profile", icon: User }
+    { path: "/citizen/dashboard", label: "Dashboard", icon: Home },
+    { path: "/citizen/transactions", label: "Transaction History", icon: History },
+    { path: "/citizen/profile", label: "Profile", icon: User }
   ];
 
   const shopkeeperLinks = [
@@ -59,6 +59,18 @@ export default function Navbar({ userName, role }) {
     return "Authority Portal";
   };
 
+  // ✅ FIXED LOGOUT FUNCTION
+  const handleLogoutClick = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("citizen");
+
+    if (onLogout) {
+      onLogout();
+    }
+
+    setMobileMenuOpen(false);
+  };
+
   return (
     <nav className={`${getRoleColor()} text-white shadow-lg`}>
       <div className="w-full px-2 sm:px-4">
@@ -71,6 +83,7 @@ export default function Navbar({ userName, role }) {
             </div>
           </div>
 
+          {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-2">
             {links.map((link) => {
               const Icon = link.icon;
@@ -91,8 +104,10 @@ export default function Navbar({ userName, role }) {
               );
             })}
 
+            {/* ✅ LOGOUT BUTTON (FIXED) */}
             <Link
               to="/"
+              onClick={handleLogoutClick}
               className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-white hover:bg-opacity-10 ml-2"
             >
               <LogOut className="w-4 h-4" />
@@ -100,14 +115,20 @@ export default function Navbar({ userName, role }) {
             </Link>
           </div>
 
+          {/* Mobile Menu Toggle */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="md:hidden p-2 rounded-lg hover:bg-white hover:bg-opacity-10"
           >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {mobileMenuOpen ? (
+              <X className="w-6 h-6" />
+            ) : (
+              <Menu className="w-6 h-6" />
+            )}
           </button>
         </div>
 
+        {/* Mobile Menu */}
         {mobileMenuOpen && (
           <div className="md:hidden pb-4 space-y-2">
             {links.map((link) => {
@@ -125,9 +146,10 @@ export default function Navbar({ userName, role }) {
               );
             })}
 
+            {/* ✅ MOBILE LOGOUT (FIXED) */}
             <Link
               to="/"
-              onClick={() => setMobileMenuOpen(false)}
+              onClick={handleLogoutClick}
               className="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-white hover:bg-opacity-10"
             >
               <LogOut className="w-5 h-5" />
