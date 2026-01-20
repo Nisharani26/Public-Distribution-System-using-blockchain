@@ -19,7 +19,19 @@ export default function Navbar({ userName, role, onLogout }) {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const userLinks = [
+  // ✅ Use role from props OR localStorage if not provided
+  const userRole =
+    role ||
+    (localStorage.getItem("citizen")
+      ? "citizen"
+      : localStorage.getItem("shopkeeper")
+      ? "shopkeeper"
+      : localStorage.getItem("authority")
+      ? "authority"
+      : "citizen"); // fallback
+
+  // Links for different roles
+  const citizenLinks = [
     { path: "/citizen/dashboard", label: "Dashboard", icon: Home },
     { path: "/citizen/transactions", label: "Transaction History", icon: History },
     { path: "/citizen/profile", label: "Profile", icon: User }
@@ -40,26 +52,29 @@ export default function Navbar({ userName, role, onLogout }) {
     { path: "/authority/audit", label: "Audit", icon: Shield }
   ];
 
+  // Select links based on current role
   const links =
-    role === "citizen"
-      ? userLinks
-      : role === "shopkeeper"
+    userRole === "citizen"
+      ? citizenLinks
+      : userRole === "shopkeeper"
       ? shopkeeperLinks
       : authorityLinks;
 
+  // Role color
   const getRoleColor = () => {
-    if (role === "citizen") return "bg-blue-600";
-    if (role === "shopkeeper") return "bg-green-600";
+    if (userRole === "citizen") return "bg-blue-600";
+    if (userRole === "shopkeeper") return "bg-green-600";
     return "bg-purple-600";
   };
 
+  // Role display name
   const getRoleName = () => {
-    if (role === "citizen") return "Citizen Portal";
-    if (role === "shopkeeper") return "Shopkeeper Portal";
+    if (userRole === "citizen") return "Citizen Portal";
+    if (userRole === "shopkeeper") return "Shopkeeper Portal";
     return "Authority Portal";
   };
 
-  // ✅ FIXED LOGOUT FUNCTION (all roles)
+  // Logout function
   const handleLogoutClick = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("citizen");
@@ -106,7 +121,7 @@ export default function Navbar({ userName, role, onLogout }) {
               );
             })}
 
-            {/* LOGOUT BUTTON */}
+            {/* Logout button */}
             <Link
               to="/"
               onClick={handleLogoutClick}
@@ -148,7 +163,7 @@ export default function Navbar({ userName, role, onLogout }) {
               );
             })}
 
-            {/* MOBILE LOGOUT */}
+            {/* Mobile Logout */}
             <Link
               to="/"
               onClick={handleLogoutClick}

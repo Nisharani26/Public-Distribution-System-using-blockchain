@@ -28,10 +28,10 @@ export default function CitizenDashboard({ user, onLogout }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar 
-        userName={finalUser?.name || "Citizen"} 
-        role="user" 
-        onLogout={onLogout} 
+       <Navbar
+        userName={finalUser?.name}
+        role="citizen"
+        onLogout={onLogout}
       />
 
       <div className="max-w-full px-4 sm:px-6 lg:px-8 py-8">

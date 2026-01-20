@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate, Link } from "react-router-dom";
+import React, { useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 
 // Authority pages
@@ -19,8 +19,8 @@ import ShopkeeperDashboard from "./pages/ShopkeeperDashboard";
 import ShopkeeperProfile from "./pages/ShopkeeperProfile";
 import ShopkeeperTransactionHistory from "./pages/ShopkeeperTransactionHistory";
 import ShopkeeperWeightMonitor from "./pages/ShopkeeperWeightMonitor";
+
 export default function App() {
-  // Load user from localStorage if already logged in
   const [user, setUser] = useState(() => {
     const storedCitizen = localStorage.getItem("citizen");
     const storedShop = localStorage.getItem("shopkeeper");
@@ -38,13 +38,12 @@ export default function App() {
     localStorage.removeItem("shopkeeper");
     localStorage.removeItem("authority");
     setUser(null);
-    console.log("Logged out");
   };
 
   return (
     <BrowserRouter>
       <Routes>
-        {/* LOGIN ROUTE (redirect if already logged in) */}
+        {/* LOGIN ROUTE */}
         <Route
           path="/"
           element={
@@ -62,118 +61,26 @@ export default function App() {
           }
         />
 
-        {/* AUTHORITY ROUTES */}
-        <Route
-          path="/authority/dashboard"
-          element={<AuthorityDashboard user={user} onLogout={handleLogout} />}
-        />
-        <Route
-          path="/authority/users"
-          element={<AuthorityUsers user={user} onLogout={handleLogout} />}
-        />
-        <Route
-          path="/authority/shops"
-          element={<AuthorityShops user={user} onLogout={handleLogout} />}
-        />
-        <Route
-          path="/authority/requests"
-          element={<AuthorityRequests user={user} onLogout={handleLogout} />}
-        />
-        <Route
-          path="/authority/audit"
-          element={<AuthorityAudit user={user} onLogout={handleLogout} />}
-        />
+        {/* Authority routes */}
+        <Route path="/authority/dashboard" element={<AuthorityDashboard user={user} onLogout={handleLogout} />} />
+        <Route path="/authority/users" element={<AuthorityUsers user={user} onLogout={handleLogout} />} />
+        <Route path="/authority/shops" element={<AuthorityShops user={user} onLogout={handleLogout} />} />
+        <Route path="/authority/requests" element={<AuthorityRequests user={user} onLogout={handleLogout} />} />
+        <Route path="/authority/audit" element={<AuthorityAudit user={user} onLogout={handleLogout} />} />
 
-        {/* CITIZEN ROUTES */}
-        <Route
-          path="/citizen/dashboard"
-          element={
-            localStorage.getItem("token") && user?.role === "citizen" ? (
-              <CitizenDashboard user={user} onLogout={handleLogout} />
-            ) : (
-              <Navigate to="/" replace />
-            )
-          }
-        />
-        <Route
-          path="/citizen/profile"
-          element={
-            localStorage.getItem("token") && user?.role === "citizen" ? (
-              <CitizenProfile user={user} onLogout={handleLogout} />
-            ) : (
-              <Navigate to="/" replace />
-            )
-          }
-        />
-        <Route
-          path="/citizen/transactions"
-          element={
-            localStorage.getItem("token") && user?.role === "citizen" ? (
-              <CitizenTransactionHistory user={user} onLogout={handleLogout} />
-            ) : (
-              <Navigate to="/" replace />
-            )
-          }
-        />
+        {/* Citizen routes */}
+        <Route path="/citizen/dashboard" element={user?.role === "citizen" ? <CitizenDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
+        <Route path="/citizen/profile" element={user?.role === "citizen" ? <CitizenProfile user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
+        <Route path="/citizen/transactions" element={user?.role === "citizen" ? <CitizenTransactionHistory user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
 
-        {/* SHOPKEEPER ROUTES */}
-        <Route
-          path="/shopkeeper/dashboard"
-          element={
-            localStorage.getItem("token") && user?.role === "shopkeeper" ? (
-              <ShopkeeperDashboard user={user} onLogout={handleLogout} />
-            ) : (
-              <Navigate to="/" replace />
-            )
-          }
-        />
-        <Route
-          path="/shopkeeper/profile"
-          element={
-            localStorage.getItem("token") && user?.role === "shopkeeper" ? (
-              <ShopkeeperProfile user={user} onLogout={handleLogout} />
-            ) : (
-              <Navigate to="/" replace />
-            )
-          }
-        />
-        <Route
-          path="/shopkeeper/transactions"
-          element={
-            localStorage.getItem("token") && user?.role === "shopkeeper" ? (
-              <ShopkeeperTransactionHistory user={user} onLogout={handleLogout} />
-            ) : (
-              <Navigate to="/" replace />
-            )
-          }
-        />
-        <Route
-          path="/shopkeeper/weight-monitor"
-          element={
-            localStorage.getItem("token") && user?.role === "shopkeeper" ? (
-              <ShopkeeperWeightMonitor user={user} onLogout={handleLogout} />
-            ) : (
-              <Navigate to="/" replace />
-            )
-          }
-        />
-        {/* SINGLE catch-all */}
-        <Route
-          path="*"
-          element={
-            localStorage.getItem("token") ? (
-              user?.role === "citizen" ? (
-                <Navigate to="/citizen/dashboard" replace />
-              ) : user?.role === "shopkeeper" ? (
-                <Navigate to="/shopkeeper/dashboard" replace />
-              ) : (
-                <Navigate to="/authority/dashboard" replace />
-              )
-            ) : (
-              <Navigate to="/" replace />
-            )
-          }
-        />
+        {/* Shopkeeper routes */}
+        <Route path="/shopkeeper/dashboard" element={user?.role === "shopkeeper" ? <ShopkeeperDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
+        <Route path="/shopkeeper/profile" element={user?.role === "shopkeeper" ? <ShopkeeperProfile user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
+        <Route path="/shopkeeper/transactions" element={user?.role === "shopkeeper" ? <ShopkeeperTransactionHistory user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
+        <Route path="/shopkeeper/weight-monitor" element={user?.role === "shopkeeper" ? <ShopkeeperWeightMonitor user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
+
+        {/* Catch-all */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

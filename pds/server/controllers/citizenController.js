@@ -1,7 +1,7 @@
 const { CitizenLogin, CitizenProfile, CitizenFamily } = require("../models/Citizen");
 const jwt = require("jsonwebtoken");
 
-// In-memory OTP storage
+// In-memory OTP storage (for simplicity, can later use Redis)
 const otpStore = new Map();
 
 /* ---------- STEP 1: VERIFY RATION ID ---------- */
@@ -9,9 +9,11 @@ exports.citizenLogin = async (req, res) => {
   const { rationId } = req.body;
 
   try {
+    // Check if citizen exists in login collection
     const login = await CitizenLogin.findOne({ rationId });
     if (!login) return res.status(401).json({ message: "Invalid Ration ID" });
 
+    // Get profile info
     const profile = await CitizenProfile.findOne({ rationId });
 
     res.json({
@@ -34,13 +36,14 @@ exports.sendCitizenOTP = async (req, res) => {
     const login = await CitizenLogin.findOne({ rationId });
     if (!login) return res.status(404).json({ message: "Citizen not found" });
 
-    // If phone is provided (first time), verify it
+    // Optional phone validation
     if (phone && login.phone !== phone) {
       return res.status(401).json({ message: "Phone number does not match Ration ID" });
     }
 
+    // Generate OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    otpStore.set(rationId, { otp, expiresAt: Date.now() + 5 * 60 * 1000 });
+    otpStore.set(rationId, { otp, expiresAt: Date.now() + 5 * 60 * 1000 }); // 5 minutes
 
     console.log(`✅ OTP for ${rationId}: ${otp}`);
 
@@ -48,7 +51,7 @@ exports.sendCitizenOTP = async (req, res) => {
       message: "OTP sent successfully",
       rationId: login.rationId,
       name: login.rationId,
-      phone: login.phone, // Always send phone back for frontend
+      phone: login.phone,
     });
   } catch (err) {
     console.error("OTP Error:", err);
@@ -73,11 +76,12 @@ exports.verifyCitizenOTP = async (req, res) => {
   const login = await CitizenLogin.findOne({ rationId });
   if (!login) return res.status(404).json({ message: "Citizen not found" });
 
+  // Generate JWT token
   const token = jwt.sign(
-    { rationId: login.rationId, role: "CITIZEN" },
-    process.env.JWT_SECRET,
-    { expiresIn: "1d" }
-  );
+  { rationId: login.rationId, role: "citizen" },
+  process.env.JWT_SECRET,
+  { expiresIn: "1d" }
+);
 
   otpStore.delete(rationId);
   console.log(`✅ OTP verified successfully for ${rationId}`);
@@ -88,7 +92,7 @@ exports.verifyCitizenOTP = async (req, res) => {
 /* ---------- CITIZEN DASHBOARD DATA ---------- */
 exports.getCitizenData = async (req, res) => {
   try {
-    const rationId = req.citizen.rationId;
+    const rationId = req.citizen.rationId; // extracted from JWT middleware
 
     const login = await CitizenLogin.findOne({ rationId });
     const profile = await CitizenProfile.findOne({ rationId });

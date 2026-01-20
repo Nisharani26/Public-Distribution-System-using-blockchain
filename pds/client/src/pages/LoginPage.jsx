@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Building2 } from "lucide-react";
 import AuthorityOTPModal from "../components/AuthorityOTPModal";
 import CitizenOTPModal from "../components/CitizenOTPModal";
-import ShopkeeperOTPModal from "../components/ShopkeeperOTPModal"; // ✅ new
+import ShopkeeperOTPModal from "../components/ShopkeeperOTPModal";
 import PasswordSetupModal from "../components/PasswordSetupModal";
 import { Link } from "react-router-dom";
 
@@ -13,11 +13,11 @@ export default function LoginPage({ onLogin }) {
   const [password, setPassword] = useState("");
   const [showOTP, setShowOTP] = useState(false);
   const [showCitizenOTP, setShowCitizenOTP] = useState(false);
-  const [showShopkeeperOTP, setShowShopkeeperOTP] = useState(false); // ✅ new
+  const [showShopkeeperOTP, setShowShopkeeperOTP] = useState(false);
   const [showPasswordSetup, setShowPasswordSetup] = useState(false);
   const [pendingUser, setPendingUser] = useState(null);
   const [pendingCitizen, setPendingCitizen] = useState(null);
-  const [pendingShopkeeper, setPendingShopkeeper] = useState(null); // ✅ new
+  const [pendingShopkeeper, setPendingShopkeeper] = useState(null);
   const [error, setError] = useState("");
   const [redirectToAuthority, setRedirectToAuthority] = useState(false);
 
@@ -32,17 +32,20 @@ export default function LoginPage({ onLogin }) {
     e.preventDefault();
     setError("");
 
+    const userIdTrimmed = userId.trim();
+    const phoneTrimmed = phone.trim();
+
     const twelveDigitRegex = /^\d{12}$/;
     const authorityRegex = /^[A-Za-z0-9]{6}$/;
     const phoneRegex = /^\d{10}$/;
     const passwordRegex = /^.{8,}$/;
 
-    if ((role === "user" || role === "shopkeeper") && !twelveDigitRegex.test(userId)) {
+    if ((role === "user" || role === "shopkeeper") && !twelveDigitRegex.test(userIdTrimmed)) {
       setError("ID must be a valid 12-digit number");
       return;
     }
 
-    if (role === "authority" && !authorityRegex.test(userId)) {
+    if (role === "authority" && !authorityRegex.test(userIdTrimmed)) {
       setError("Authority ID must be 6 characters long and contain letters & numbers");
       return;
     }
@@ -58,7 +61,7 @@ export default function LoginPage({ onLogin }) {
         const res = await fetch("http://localhost:5000/api/auth/authority/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ authorityId: userId, password }),
+          body: JSON.stringify({ authorityId: userIdTrimmed, password }),
         });
         const data = await res.json();
         if (!res.ok) {
@@ -92,7 +95,7 @@ export default function LoginPage({ onLogin }) {
         const res = await fetch("http://localhost:5000/api/citizen/send-otp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ rationId: userId, phone }),
+          body: JSON.stringify({ rationId: userIdTrimmed, phone: phoneTrimmed }),
         });
         const data = await res.json();
         if (!res.ok) {
@@ -121,7 +124,7 @@ export default function LoginPage({ onLogin }) {
         const res = await fetch("http://localhost:5000/api/shopkeeper/send-otp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ shopNo: userId, phone }),
+          body: JSON.stringify({ shopNo: userIdTrimmed, phone: phoneTrimmed }),
         });
         const data = await res.json();
         if (!res.ok) {
@@ -145,42 +148,26 @@ export default function LoginPage({ onLogin }) {
     }
   };
 
-  // ===== AUTHORITY OTP VERIFY =====
+  // ===== OTP VERIFY HANDLERS =====
   const handleOTPVerify = (token) => {
     localStorage.setItem("token", token);
-    if (pendingUser) {
-      localStorage.setItem("authority", JSON.stringify(pendingUser));
-    }
+    if (pendingUser) localStorage.setItem("authority", JSON.stringify(pendingUser));
     setShowOTP(false);
     setRedirectToAuthority(true);
   };
 
-  // ===== CITIZEN OTP VERIFY =====
   const handleCitizenOTPVerify = (token) => {
     localStorage.setItem("token", token);
-    if (pendingCitizen) {
-      localStorage.setItem("citizen", JSON.stringify(pendingCitizen));
-    }
+    if (pendingCitizen) localStorage.setItem("citizen", JSON.stringify(pendingCitizen));
     setShowCitizenOTP(false);
-    onLogin &&
-      onLogin({
-        role: "user",
-        ...pendingCitizen,
-      });
+    onLogin && onLogin({ role: "citizen", ...pendingCitizen });
   };
 
-  // ===== SHOPKEEPER OTP VERIFY =====
   const handleShopkeeperOTPVerify = (token) => {
     localStorage.setItem("token", token);
-    if (pendingShopkeeper) {
-      localStorage.setItem("shopkeeper", JSON.stringify(pendingShopkeeper));
-    }
+    if (pendingShopkeeper) localStorage.setItem("shopkeeper", JSON.stringify(pendingShopkeeper));
     setShowShopkeeperOTP(false);
-    onLogin &&
-      onLogin({
-        role: "shopkeeper",
-        ...pendingShopkeeper,
-      });
+    onLogin && onLogin({ role: "shopkeeper", ...pendingShopkeeper });
   };
 
   return (
@@ -207,9 +194,9 @@ export default function LoginPage({ onLogin }) {
             placeholder={role === "user" ? "12-digit Ration Card No" : "Authority / Shop No"}
             value={userId}
             onChange={(e) => {
-              const value = e.target.value;
-              if (role === "authority") setUserId(value.toUpperCase());
-              else if (/^\d*$/.test(value) && value.length <= 12) setUserId(value);
+              const val = e.target.value;
+              if (role === "authority") setUserId(val.toUpperCase());
+              else if (/^\d*$/.test(val) && val.length <= 12) setUserId(val);
             }}
             className="w-full p-2 border rounded"
           />
@@ -220,9 +207,8 @@ export default function LoginPage({ onLogin }) {
               placeholder="10-digit Phone Number (Optional)"
               value={phone}
               onChange={(e) => {
-                if (/^\d*$/.test(e.target.value) && e.target.value.length <= 10) {
-                  setPhone(e.target.value);
-                }
+                const val = e.target.value;
+                if (/^\d*$/.test(val) && val.length <= 10) setPhone(val);
               }}
               className="w-full p-2 border rounded"
             />
