@@ -77,6 +77,11 @@ export default function AuthShopPage({ user, onLogout }) {
           </div>
           <p className="text-gray-600">Monitor and manage all registered shops in the district</p>
         </div>
+        {/* TOTAL SHOPS CARD */}
+        <div className="bg-white rounded-xl shadow-md p-6 mb-6 border-l-4 border-purple-500 w-[320px]">
+          <p className="text-sm text-gray-600">Total Shops</p>
+          <p className="text-3xl font-bold text-gray-900">{shops.length}</p>
+        </div>
 
         {/* Search */}
         <div className="bg-white rounded-xl shadow-md p-6 mb-6">

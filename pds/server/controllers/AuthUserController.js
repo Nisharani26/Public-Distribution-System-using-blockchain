@@ -1,12 +1,32 @@
 const AuthUser = require("../models/AuthUser");
 const AuthUserProfile = require("../models/AuthUserProfile");
 const AuthUserFamily = require("../models/AuthUserFamily");
+const ShopLogin = require("../models/ShopLogin");   // ← IMPORTANT
 
-// GET ALL USERS (COMBINED DATA)
+// GET USERS ONLY FOR LOGGED-IN AUTHORITY
 exports.getAllAuthUsers = async (req, res) => {
   try {
-    const logins = await AuthUser.find(); // from citizenLogins
+    const authorityId = req.authority.authorityId; // from JWT
 
+    // STEP 1: Find all shops belonging to this authority
+    const shops = await ShopLogin.find(
+      { authorityId },
+      { shopNo: 1, _id: 0 }
+    );
+
+    const shopNos = shops.map(s => s.shopNo);
+
+    // If authority has no shops
+    if (shopNos.length === 0) {
+      return res.json([]);
+    }
+
+    // STEP 2: Get only users whose shopNo belongs to these shops
+    const logins = await AuthUser.find({
+      shopNo: { $in: shopNos }
+    });
+
+    // STEP 3: Attach profile + family data
     const usersWithDetails = await Promise.all(
       logins.map(async (login) => {
         const profile = await AuthUserProfile.findOne({
@@ -22,14 +42,12 @@ exports.getAllAuthUsers = async (req, res) => {
           phone: login.phone,
           shopNo: login.shopNo,
 
-          // from citizenProfiles
           fullName: profile?.fullName || "Unknown",
           address: profile?.address || "Not available",
           district: profile?.district || "",
           state: profile?.state || "",
           email: profile?.email || "",
 
-          // from citizenFamily
           familySize: family?.countOfFamilyMember || 0,
           familyMembers: family?.members || []
         };

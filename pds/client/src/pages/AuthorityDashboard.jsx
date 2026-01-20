@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
-import { Users, Building2, TrendingUp, Package } from "lucide-react";
+import { Users, Building2 } from "lucide-react";
 import {
     BarChart,
     Bar,
@@ -15,7 +15,7 @@ import {
     Cell,
 } from "recharts";
 
-// Mock Data
+// Mock Data (unchanged)
 const monthlyDistribution = [
     { month: "Jul", rice: 1200, wheat: 950, sugar: 280 },
     { month: "Aug", rice: 1350, wheat: 1020, sugar: 310 },
@@ -40,54 +40,75 @@ const pendingActions = [
 
 export default function AuthorityDashboard() {
     const [user, setUser] = useState(null);
+    const [totalUsers, setTotalUsers] = useState(0);
+    const [totalShops, setTotalShops] = useState(0);
 
-   useEffect(() => {
-    const storedAuthority = localStorage.getItem("authority");
-    if (storedAuthority) {
-        setUser(JSON.parse(storedAuthority));
-    }
-
-    const fetchAuthorityData = async () => {
-        const token = localStorage.getItem("token");
-        console.log("Fetching dashboard with token:", token); // Add this log
-
-        if (!token) {
-            console.error("No token found");
-            return;
+    useEffect(() => {
+        const storedAuthority = localStorage.getItem("authority");
+        if (storedAuthority) {
+            setUser(JSON.parse(storedAuthority));
         }
 
-        try {
-            const res = await fetch("http://localhost:5000/api/auth/authority/dashboard", {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}` // Make sure 'Bearer ' is included
-                }
-            });
+        const fetchAuthorityData = async () => {
+            const token = localStorage.getItem("token");
 
-            const data = await res.json();
-
-            if (!res.ok) {
-                console.error("Dashboard error:", data);
+            if (!token) {
+                console.error("No token found");
                 return;
             }
 
-            // Update localStorage & state
-            localStorage.setItem("authority", JSON.stringify(data.authority));
-            setUser(data.authority);
+            try {
+                const res = await fetch("http://localhost:5000/api/auth/authority/dashboard", {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
 
-            console.log("Dashboard data fetched:", data.authority); // Debug info
+                const data = await res.json();
 
-        } catch (err) {
-            console.error("Dashboard fetch error:", err);
-        }
-    };
+                if (!res.ok) {
+                    console.error("Dashboard error:", data);
+                    return;
+                }
 
-    fetchAuthorityData();
-}, []);
+                localStorage.setItem("authority", JSON.stringify(data.authority));
+                setUser(data.authority);
 
+            } catch (err) {
+                console.error("Dashboard fetch error:", err);
+            }
+        };
 
-    // Logout
+        const fetchCounts = async () => {
+            const token = localStorage.getItem("token");
+            if (!token) return;
+
+            try {
+                // Fetch users
+                const usersRes = await fetch("http://localhost:5000/api/auth/authUsers/all", {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                const usersData = await usersRes.json();
+                setTotalUsers(Array.isArray(usersData) ? usersData.length : 0);
+
+                // Fetch shops
+                const shopsRes = await fetch("http://localhost:5000/api/auth/authShops/all", {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                const shopsData = await shopsRes.json();
+                setTotalShops(Array.isArray(shopsData) ? shopsData.length : 0);
+
+            } catch (err) {
+                console.error("Error fetching counts:", err);
+            }
+        };
+
+        fetchAuthorityData();
+        fetchCounts();
+    }, []);
+
     const handleLogout = () => {
         localStorage.removeItem("token");
         localStorage.removeItem("authority");
@@ -109,6 +130,7 @@ export default function AuthorityDashboard() {
             <Navbar userName={user.name || user.authorityId} role="authority" onLogout={handleLogout} />
 
             <div className="max-w-full px-4 sm:px-6 lg:px-8 py-8">
+
                 {/* Welcome Section */}
                 <div className="bg-gradient-to-r from-purple-500 to-purple-400 rounded-xl p-6 mb-8 shadow-lg flex flex-col sm:flex-row items-center justify-between">
                     <div>
@@ -136,39 +158,27 @@ export default function AuthorityDashboard() {
                     </div>
                 </div>
 
-                {/* Stats Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                {/* Stats Cards (ONLY 2 CARDS NOW) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+
+                    {/* Total Users */}
                     <div className="bg-white rounded-lg shadow p-4 sm:p-6">
                         <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-2">
                             <Users className="w-6 h-6 text-blue-600" />
                         </div>
-                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900">1,847</h3>
-                        <p className="text-sm sm:text-base text-gray-600">Total Registered Users</p>
+                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900">{totalUsers}</h3>
+                        <p className="text-sm sm:text-base text-gray-600">Total Users</p>
                     </div>
 
+                    {/* Total Shops */}
                     <div className="bg-white rounded-lg shadow p-4 sm:p-6">
                         <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-2">
                             <Building2 className="w-6 h-6 text-green-600" />
                         </div>
-                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900">15</h3>
-                        <p className="text-sm sm:text-base text-gray-600">Active Fair Price Shops</p>
+                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900">{totalShops}</h3>
+                        <p className="text-sm sm:text-base text-gray-600">Total Shops</p>
                     </div>
 
-                    <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-                        <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center mb-2">
-                            <TrendingUp className="w-6 h-6 text-amber-600" />
-                        </div>
-                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900">4,283</h3>
-                        <p className="text-sm sm:text-base text-gray-600">Distributions This Month</p>
-                    </div>
-
-                    <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-                        <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-2">
-                            <Package className="w-6 h-6 text-purple-600" />
-                        </div>
-                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900">8,830 kg</h3>
-                        <p className="text-sm sm:text-base text-gray-600">Total Stock Remaining</p>
-                    </div>
                 </div>
 
                 {/* Pending Complaints */}
@@ -178,12 +188,13 @@ export default function AuthorityDashboard() {
                         {pendingActions.map((complaint) => (
                             <div
                                 key={complaint.id}
-                                className={`p-5 rounded-xl border-l-4 shadow-md flex flex-col justify-center ${complaint.status === "pending"
-                                    ? "border-blue-400 bg-blue-50 text-blue-800"
-                                    : complaint.status === "warning"
+                                className={`p-5 rounded-xl border-l-4 shadow-md flex flex-col justify-center ${
+                                    complaint.status === "pending"
+                                        ? "border-blue-400 bg-blue-50 text-blue-800"
+                                        : complaint.status === "warning"
                                         ? "border-amber-400 bg-amber-50 text-amber-800"
                                         : "border-red-400 bg-red-50 text-red-800"
-                                    } hover:scale-105 transition-transform duration-300`}
+                                } hover:scale-105 transition-transform duration-300`}
                             >
                                 <p className="font-semibold text-base sm:text-lg">{complaint.title}</p>
                                 <p className="text-xs text-gray-500 mt-1">Click to view details</p>
@@ -230,6 +241,7 @@ export default function AuthorityDashboard() {
                         </PieChart>
                     </ResponsiveContainer>
                 </div>
+
             </div>
         </div>
     );

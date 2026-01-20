@@ -7,7 +7,7 @@ const {
   sendShopkeeperOTP,
   verifyShopkeeperOTP,
   getShopkeeperData,
-} = require("../controllers/ShopkeeperController");
+} = require("../controllers/shopkeeperController");
 
 router.post("/login", shopkeeperLogin);
 router.post("/send-otp", sendShopkeeperOTP);
