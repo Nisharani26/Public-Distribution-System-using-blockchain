@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
-import { Users, Search, Eye, Building2 } from "lucide-react";
+import { Users, Search, Eye, Building2, CheckCircle2 } from "lucide-react";
 
 export default function AuthorityUsers({ user, onLogout }) {
   const [users, setUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterShop, setFilterShop] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [showDetails, setShowDetails] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -58,6 +62,75 @@ export default function AuthorityUsers({ user, onLogout }) {
       filterShop === "all" || u.shopNo === filterShop;
 
     return matchesSearch && matchesShop;
+  });
+  const handleViewDetails = (user) => {
+    setSelectedUser(user);
+    setShowDetails(true);
+  };
+
+  const closeDetails = () => {
+    setShowDetails(false);
+    setSelectedUser(null);
+    setFromDate("");
+    setToDate("");
+  };
+
+
+  const allTransactions = [
+  {
+    month: "January 2025",
+    date: "2025-01-05",
+    received: [
+      { item: "Rice", qty: "5 kg" },
+      { item: "Wheat", qty: "3 kg" },
+      { item: "Sugar", qty: "1 kg" },
+    ],
+    notReceived: [] // ✅ ALL ITEMS RECEIVED
+  },
+
+  {
+    month: "February 2025",
+    date: "2025-02-08",
+    received: [
+      { item: "Rice", qty: "5 kg" },
+    ],
+    notReceived: [
+      { item: "Wheat", qty: "3 kg" },
+      { item: "Sugar", qty: "1 kg" },
+    ]
+  },
+
+  {
+    month: "March 2025",
+    date: "2025-03-10",
+    received: [
+      { item: "Rice", qty: "5 kg" },
+      { item: "Sugar", qty: "1 kg" },
+    ],
+    notReceived: [
+      { item: "Wheat", qty: "3 kg" },
+    ]
+  },
+
+  {
+    month: "April 2025",
+    date: "2025-04-06",
+    received: [],
+    notReceived: [
+      { item: "Rice", qty: "5 kg" },
+      { item: "Wheat", qty: "3 kg" },
+      { item: "Sugar", qty: "1 kg" },
+    ]
+  }
+];
+
+
+
+
+  const filteredTransactions = allTransactions.filter(t => {
+    if (fromDate && t.date < fromDate) return false;
+    if (toDate && t.date > toDate) return false;
+    return true;
   });
 
   const uniqueShops = Array.from(
@@ -209,10 +282,14 @@ export default function AuthorityUsers({ user, onLogout }) {
                     </td>
 
                     <td className="px-6 py-4 text-sm">
-                      <button className="inline-flex items-center space-x-1 text-blue-600 hover:text-blue-800 font-medium">
+                      <button
+                        onClick={() => handleViewDetails(u)}
+                        className="inline-flex items-center space-x-1 text-blue-600 hover:text-blue-800 font-medium"
+                      >
                         <Eye className="w-4 h-4" />
                         <span>View Details</span>
                       </button>
+
                     </td>
                   </tr>
                 ))}
@@ -234,6 +311,154 @@ export default function AuthorityUsers({ user, onLogout }) {
           )}
         </div>
       </div>
+      {showDetails && selectedUser && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+          <div className="bg-white w-[900px] max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl relative p-8">
+
+            {/* CLOSE BUTTON */}
+            <button
+              onClick={closeDetails}
+              className="absolute top-4 right-4 text-gray-500 hover:text-red-600 text-xl font-bold"
+            >
+              ✕
+            </button>
+
+            {/* HEADER */}
+            <h2 className="text-2xl font-bold text-purple-700 mb-6">
+              Citizen Detailed Profile
+            </h2>
+
+            {/* BASIC INFO */}
+            <div className="grid grid-cols-2 gap-6 mb-6">
+              <div>
+                <p><b>Name:</b> {selectedUser.fullName}</p>
+                <p><b>Ration ID:</b> {selectedUser.rationId}</p>
+                <p><b>Phone:</b> +91 {selectedUser.phone}</p>
+              </div>
+              <div>
+                <p><b>Shop No:</b> {selectedUser.shopNo}</p>
+                <p><b>District:</b> {selectedUser.district}</p>
+                <p><b>State:</b> {selectedUser.state}</p>
+              </div>
+            </div>
+
+            {/* FAMILY DETAILS */}
+            <h3 className="text-lg font-semibold mb-2">Family Members</h3>
+            <table className="w-full border mb-6">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="border p-2">Name</th>
+                  <th className="border p-2">Relation</th>
+                  <th className="border p-2">Age</th>
+                  <th className="border p-2">Gender</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selectedUser.familyMembers.map((m, i) => (
+                  <tr key={i}>
+                    <td className="border p-2">{m.memberName}</td>
+                    <td className="border p-2">{m.relation}</td>
+                    <td className="border p-2">{m.age}</td>
+                    <td className="border p-2">{m.gender}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {/* TRANSACTION HISTORY */}
+            <h3 className="text-lg font-semibold mb-3">Transaction History</h3>
+            {/* DATE FILTER */}
+            <div className="flex gap-4 mb-4">
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="border p-2 rounded"
+              />
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="border p-2 rounded"
+              />
+            </div>
+
+            {/* TRANSACTION TABLE */}
+            <table className="w-full border rounded-xl overflow-hidden shadow">
+              <thead className="bg-gradient-to-r from-purple-600 to-purple-500 text-white">
+
+                <tr>
+                  <th className="p-4 text-left">Month</th>
+                  <th className="p-4 text-left">Items Received</th>
+                  <th className="p-4 text-left">Items Not Received</th>
+                </tr>
+              </thead>
+
+              <tbody className="bg-white">
+                {filteredTransactions.length > 0 ? (
+                  filteredTransactions.map((t, i) => (
+                    <tr key={i} className="border-t hover:bg-purple-50 transition">
+                      {/* MONTH */}
+                      <td className="p-4 font-semibold text-gray-800">
+                        {t.month}
+                        <div className="text-sm text-gray-500">
+                          {t.date}
+                        </div>
+                      </td>
+
+                      {/* RECEIVED */}
+                      <td className="p-4">
+                        <div className="space-y-2">
+                          {t.received.map((r, idx) => (
+                            <div
+                              key={idx}
+                              className="flex justify-between bg-green-100 text-green-800 px-3 py-1 rounded-lg"
+                            >
+                              <span>{r.item}</span>
+                              <span className="font-medium">{r.qty}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+
+                      {/* NOT RECEIVED */}
+                      <td className="p-4">
+                        <div className="space-y-2">
+                          {t.notReceived.length > 0 ? (
+                            t.notReceived.map((n, idx) => (
+                              <div
+                                key={idx}
+                                className="flex justify-between items-center bg-red-100 text-red-700 px-3 py-1 rounded-lg"
+                              >
+                                <span>{n.item}</span>
+                                <span className="font-medium">{n.qty}</span>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-lg font-medium">
+                              <CheckCircle2 className="w-5 h-5" />
+                              <span>No pending items</span>
+                            </div>
+                          )}
+
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="3" className="text-center p-6 text-gray-500">
+                      No transactions in selected date range
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
