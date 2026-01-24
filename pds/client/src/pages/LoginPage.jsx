@@ -105,7 +105,6 @@ export default function LoginPage({ onLogin }) {
 
         setPendingCitizen({
           rationId: data.rationId,
-          name: data.name,
           mobile: data.phone,
           assignedShop: data.assignedShop || "Not Assigned",
         });
@@ -156,12 +155,42 @@ export default function LoginPage({ onLogin }) {
     setRedirectToAuthority(true);
   };
 
-  const handleCitizenOTPVerify = (token) => {
-    localStorage.setItem("token", token);
-    if (pendingCitizen) localStorage.setItem("citizen", JSON.stringify(pendingCitizen));
-    setShowCitizenOTP(false);
-    onLogin && onLogin({ role: "citizen", ...pendingCitizen });
-  };
+ const handleCitizenOTPVerify = async (token) => {
+  localStorage.setItem("token", token);
+
+  if (!pendingCitizen) return;
+
+  try {
+    // Fetch full profile
+    const profileRes = await fetch(`http://localhost:5000/api/citizen/profile/${pendingCitizen.rationId}`);
+    if (!profileRes.ok) throw new Error("Failed to fetch profile");
+    const profileData = await profileRes.json();
+
+    // Fetch family members
+    const familyRes = await fetch(`http://localhost:5000/api/citizen/family/${pendingCitizen.rationId}`);
+    let familyData = { members: [] };
+    if (familyRes.ok) {
+      familyData = await familyRes.json();
+    }
+
+    // Merge profile + assigned shop + family
+    const fullUser = {
+      ...profileData,
+      assignedShop: pendingCitizen.assignedShop || "Not Assigned",
+      family: familyData.members || [],
+    };
+
+    localStorage.setItem("citizen", JSON.stringify(fullUser));
+
+    // Pass to App state
+    onLogin({ role: "citizen", ...fullUser });
+  } catch (err) {
+    console.error("Citizen login failed:", err);
+  }
+};
+
+
+
 
   const handleShopkeeperOTPVerify = (token) => {
     localStorage.setItem("token", token);

@@ -69,7 +69,7 @@ export default function App() {
         <Route path="/authority/audit" element={<AuthorityAudit user={user} onLogout={handleLogout} />} />
 
         {/* Citizen routes */}
-        <Route path="/citizen/dashboard" element={user?.role === "citizen" ? <CitizenDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
+        <Route path="/citizen/dashboard" element={user?.role === "citizen" ? <CitizenDashboard user={user} onLogout={handleLogout}  /> : <Navigate to="/" replace />} />
         <Route path="/citizen/profile" element={user?.role === "citizen" ? <CitizenProfile user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
         <Route path="/citizen/transactions" element={user?.role === "citizen" ? <CitizenTransactionHistory user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
 
