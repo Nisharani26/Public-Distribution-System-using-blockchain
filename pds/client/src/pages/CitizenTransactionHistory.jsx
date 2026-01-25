@@ -19,7 +19,7 @@ export default function CitizenTransactionHistory({ user, onLogout }) {
     <div className="min-h-screen bg-gray-50">
       <Navbar userName={user.name} role="citizen" onLogout={onLogout} />
 
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="w-full px-6 py-8">
         <div className="mb-8 flex items-center space-x-3">
           <History className="w-8 h-8 text-blue-600" />
           <h1 className="text-3xl font-bold text-gray-900">Transaction History</h1>

@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
 
-// Mock previous complaints
+// Mock data for complaints and shop stock (you can replace with real API later)
 const PREVIOUS_COMPLAINTS = [
   { id: 1, date: "2026-01-05", description: "Long waiting time", status: "Pending" },
   { id: 2, date: "2025-12-28", description: "Ration quality issue", status: "Resolved" },
 ];
 
-// Mock live stock
 const SHOP_STOCK = [
   { id: 1, item: "Wheat", quantity: "50 kg" },
   { id: 2, item: "Rice", quantity: "30 kg" },
@@ -16,42 +15,52 @@ const SHOP_STOCK = [
 
 export default function CitizenDashboard({ user, onLogout }) {
   const [family, setFamily] = useState([]);
-  const [showComplaintModal, setShowComplaintModal] = useState(false);
   const [complaints, setComplaints] = useState(PREVIOUS_COMPLAINTS);
   const [newComplaint, setNewComplaint] = useState("");
+  const [showComplaintModal, setShowComplaintModal] = useState(false);
 
-  // Fetch family from backend (replace with your API)
+  // Fetch family data from backend
   useEffect(() => {
     async function fetchFamily() {
       try {
-        const res = await fetch(`/api/citizen/family/${user.rationId}`);
+        const token = localStorage.getItem("token");
+        const res = await fetch(`http://localhost:5000/api/citizen/family/${user.rationId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         const data = await res.json();
         setFamily(data.members || []);
       } catch (err) {
         console.error("Failed to fetch family:", err);
       }
     }
+
     if (user?.rationId) fetchFamily();
   }, [user]);
 
   const handleSubmitComplaint = () => {
-    if (newComplaint.trim() === "") return;
+    if (!newComplaint.trim()) return;
+
     const complaint = {
       id: complaints.length + 1,
       date: new Date().toISOString().split("T")[0],
       description: newComplaint,
       status: "Pending",
     };
+
     setComplaints([complaint, ...complaints]);
     setNewComplaint("");
     setShowComplaintModal(false);
   };
 
-  // Only head of family (first member)
-  const headMember = user.family?.[0];
+  const headMember = family?.[0];
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar userName={user.fullName || "Citizen"} role="citizen" onLogout={onLogout} />
+      <Navbar
+        userName={headMember?.memberName || user.fullName || "Citizen"}
+        role="citizen"
+        onLogout={onLogout}
+      />
 
       <div className="w-full px-6 py-8 space-y-8">
         {/* Welcome Section */}
@@ -59,9 +68,7 @@ export default function CitizenDashboard({ user, onLogout }) {
           <h1 className="text-3xl font-bold mb-2">
             Welcome, {headMember?.memberName || user.fullName || "Citizen"}!
           </h1>
-          {headMember && (
-            <p className="text-blue-100">Relation: {headMember.relation}</p>
-          )}
+          {headMember && <p className="text-blue-100">Relation: {headMember.relation}</p>}
         </div>
 
         {/* Live Stock Table */}
@@ -113,10 +120,11 @@ export default function CitizenDashboard({ user, onLogout }) {
                     <p className="text-xs text-gray-500">{c.date}</p>
                   </div>
                   <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${c.status === "Resolved"
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      c.status === "Resolved"
                         ? "bg-green-100 text-green-800"
                         : "bg-yellow-100 text-yellow-800"
-                      }`}
+                    }`}
                   >
                     {c.status}
                   </span>

@@ -12,6 +12,7 @@ export default function AuthorityUsers({ user, onLogout }) {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
 
+  /* ================= FETCH USERS ================= */
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -28,7 +29,6 @@ export default function AuthorityUsers({ user, onLogout }) {
 
         const data = await res.json();
 
-        // ✅ FIX: ensure users is ALWAYS an array
         if (Array.isArray(data)) {
           setUsers(data);
         } else if (Array.isArray(data.users)) {
@@ -48,25 +48,56 @@ export default function AuthorityUsers({ user, onLogout }) {
   }, []);
 
   /* ================= FILTERING ================= */
-
   const filteredUsers = users.filter((u) => {
     const matchesSearch =
-      (u.fullName || "")
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
-      (u.rationId || "")
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase());
+      (u.fullName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (u.rationId || "").toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesShop =
-      filterShop === "all" || u.shopNo === filterShop;
+    const matchesShop = filterShop === "all" || u.shopNo === filterShop;
 
     return matchesSearch && matchesShop;
   });
-  const handleViewDetails = (user) => {
-    setSelectedUser(user);
-    setShowDetails(true);
+
+  const uniqueShops = Array.from(
+    new Set(users.map((u) => u.shopNo).filter(Boolean))
+  ).sort();
+
+  /* ================= VIEW DETAILS ================= */
+  const handleViewDetails = async (user) => {
+    try {
+      const token = localStorage.getItem("token");
+
+      // Fetch stock template
+      const res = await fetch(`http://localhost:5000/api/userStock/template`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const stockTemplate = await res.json();
+
+      const totalMembers = user.familyMembers?.length || 1;
+
+      // Calculate allocated items safely
+      const allocatedItems = stockTemplate.map((item) => {
+        const perMember = item.perMemberQty || 0;
+        const perFamily = item.perFamilyQty || 0;
+        const allocatedQty = perMember * totalMembers + perFamily;
+
+        return {
+          itemName: item.itemName || "Unknown",
+          allocatedQty,
+          unit: item.unit || "-",
+        };
+      });
+
+
+      setSelectedUser({ ...user, allocatedItems });
+      setShowDetails(true);
+    } catch (err) {
+      console.error(err);
+      setSelectedUser({ ...user, allocatedItems: [] });
+      setShowDetails(true);
+    }
   };
+
 
   const closeDetails = () => {
     setShowDetails(false);
@@ -75,70 +106,55 @@ export default function AuthorityUsers({ user, onLogout }) {
     setToDate("");
   };
 
-
+  /* ================= TRANSACTIONS (SAMPLE STATIC DATA) ================= */
   const allTransactions = [
-  {
-    month: "January 2025",
-    date: "2025-01-05",
-    received: [
-      { item: "Rice", qty: "5 kg" },
-      { item: "Wheat", qty: "3 kg" },
-      { item: "Sugar", qty: "1 kg" },
-    ],
-    notReceived: [] // ✅ ALL ITEMS RECEIVED
-  },
+    {
+      month: "January 2025",
+      date: "2025-01-05",
+      received: [
+        { item: "Rice", qty: "5 kg" },
+        { item: "Wheat", qty: "3 kg" },
+        { item: "Sugar", qty: "1 kg" },
+      ],
+      notReceived: [],
+    },
+    {
+      month: "February 2025",
+      date: "2025-02-08",
+      received: [{ item: "Rice", qty: "5 kg" }],
+      notReceived: [
+        { item: "Wheat", qty: "3 kg" },
+        { item: "Sugar", qty: "1 kg" },
+      ],
+    },
+    {
+      month: "March 2025",
+      date: "2025-03-10",
+      received: [
+        { item: "Rice", qty: "5 kg" },
+        { item: "Sugar", qty: "1 kg" },
+      ],
+      notReceived: [{ item: "Wheat", qty: "3 kg" }],
+    },
+    {
+      month: "April 2025",
+      date: "2025-04-06",
+      received: [],
+      notReceived: [
+        { item: "Rice", qty: "5 kg" },
+        { item: "Wheat", qty: "3 kg" },
+        { item: "Sugar", qty: "1 kg" },
+      ],
+    },
+  ];
 
-  {
-    month: "February 2025",
-    date: "2025-02-08",
-    received: [
-      { item: "Rice", qty: "5 kg" },
-    ],
-    notReceived: [
-      { item: "Wheat", qty: "3 kg" },
-      { item: "Sugar", qty: "1 kg" },
-    ]
-  },
-
-  {
-    month: "March 2025",
-    date: "2025-03-10",
-    received: [
-      { item: "Rice", qty: "5 kg" },
-      { item: "Sugar", qty: "1 kg" },
-    ],
-    notReceived: [
-      { item: "Wheat", qty: "3 kg" },
-    ]
-  },
-
-  {
-    month: "April 2025",
-    date: "2025-04-06",
-    received: [],
-    notReceived: [
-      { item: "Rice", qty: "5 kg" },
-      { item: "Wheat", qty: "3 kg" },
-      { item: "Sugar", qty: "1 kg" },
-    ]
-  }
-];
-
-
-
-
-  const filteredTransactions = allTransactions.filter(t => {
+  const filteredTransactions = allTransactions.filter((t) => {
     if (fromDate && t.date < fromDate) return false;
     if (toDate && t.date > toDate) return false;
     return true;
   });
 
-  const uniqueShops = Array.from(
-    new Set(users.map((u) => u.shopNo).filter(Boolean))
-  ).sort();
-
   /* ================= UI ================= */
-
   return (
     <div className="min-h-screen bg-gray-100">
       <Navbar
@@ -166,9 +182,7 @@ export default function AuthorityUsers({ user, onLogout }) {
         {/* TOTAL USERS */}
         <div className="bg-white rounded-xl shadow-md p-6 mb-6 border-l-4 border-purple-500 w-[320px]">
           <p className="text-sm text-gray-600">Total Users</p>
-          <p className="text-3xl font-bold text-gray-900">
-            {users.length}
-          </p>
+          <p className="text-3xl font-bold text-gray-900">{users.length}</p>
         </div>
 
         {/* FILTER PANEL */}
@@ -184,9 +198,7 @@ export default function AuthorityUsers({ user, onLogout }) {
                 <input
                   type="text"
                   value={searchQuery}
-                  onChange={(e) =>
-                    setSearchQuery(e.target.value)
-                  }
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Name or Ration ID..."
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
@@ -202,9 +214,7 @@ export default function AuthorityUsers({ user, onLogout }) {
                 <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <select
                   value={filterShop}
-                  onChange={(e) =>
-                    setFilterShop(e.target.value)
-                  }
+                  onChange={(e) => setFilterShop(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="all">All Shops</option>
@@ -278,7 +288,7 @@ export default function AuthorityUsers({ user, onLogout }) {
                     </td>
 
                     <td className="px-6 py-4 text-sm text-gray-900">
-                      {u.familySize} members
+                      {u.familyMembers?.length || 1} members
                     </td>
 
                     <td className="px-6 py-4 text-sm">
@@ -289,7 +299,6 @@ export default function AuthorityUsers({ user, onLogout }) {
                         <Eye className="w-4 h-4" />
                         <span>View Details</span>
                       </button>
-
                     </td>
                   </tr>
                 ))}
@@ -298,9 +307,7 @@ export default function AuthorityUsers({ user, onLogout }) {
           </div>
 
           {loading && (
-            <div className="text-center py-6">
-              Loading users...
-            </div>
+            <div className="text-center py-6">Loading users...</div>
           )}
 
           {!loading && filteredUsers.length === 0 && (
@@ -311,11 +318,11 @@ export default function AuthorityUsers({ user, onLogout }) {
           )}
         </div>
       </div>
+
+      {/* ================= MODAL ================= */}
       {showDetails && selectedUser && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
           <div className="bg-white w-[900px] max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl relative p-8">
-
-            {/* CLOSE BUTTON */}
             <button
               onClick={closeDetails}
               className="absolute top-4 right-4 text-gray-500 hover:text-red-600 text-xl font-bold"
@@ -323,7 +330,6 @@ export default function AuthorityUsers({ user, onLogout }) {
               ✕
             </button>
 
-            {/* HEADER */}
             <h2 className="text-2xl font-bold text-purple-700 mb-6">
               Citizen Detailed Profile
             </h2>
@@ -342,7 +348,7 @@ export default function AuthorityUsers({ user, onLogout }) {
               </div>
             </div>
 
-            {/* FAMILY DETAILS */}
+            {/* FAMILY MEMBERS */}
             <h3 className="text-lg font-semibold mb-2">Family Members</h3>
             <table className="w-full border mb-6">
               <thead className="bg-gray-100">
@@ -354,7 +360,7 @@ export default function AuthorityUsers({ user, onLogout }) {
                 </tr>
               </thead>
               <tbody>
-                {selectedUser.familyMembers.map((m, i) => (
+                {(selectedUser.familyMembers || []).map((m, i) => (
                   <tr key={i}>
                     <td className="border p-2">{m.memberName}</td>
                     <td className="border p-2">{m.relation}</td>
@@ -364,9 +370,30 @@ export default function AuthorityUsers({ user, onLogout }) {
                 ))}
               </tbody>
             </table>
-            {/* TRANSACTION HISTORY */}
+
+            {/* ALLOCATED ITEMS */}
+            <h3 className="text-lg font-semibold mb-2">Allocated Items</h3>
+            <table className="w-full border mb-6">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="border p-2">Item</th>
+                  <th className="border p-2">Quantity</th>
+                  <th className="border p-2">Unit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(selectedUser.allocatedItems || []).map((item, idx) => (
+                  <tr key={idx}>
+                    <td className="border p-2">{item.itemName}</td>
+                    <td className="border p-2">{item.allocatedQty}</td>
+                    <td className="border p-2">{item.unit}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* TRANSACTIONS */}
             <h3 className="text-lg font-semibold mb-3">Transaction History</h3>
-            {/* DATE FILTER */}
             <div className="flex gap-4 mb-4">
               <input
                 type="date"
@@ -382,65 +409,50 @@ export default function AuthorityUsers({ user, onLogout }) {
               />
             </div>
 
-            {/* TRANSACTION TABLE */}
             <table className="w-full border rounded-xl overflow-hidden shadow">
               <thead className="bg-gradient-to-r from-purple-600 to-purple-500 text-white">
-
                 <tr>
                   <th className="p-4 text-left">Month</th>
                   <th className="p-4 text-left">Items Received</th>
                   <th className="p-4 text-left">Items Not Received</th>
                 </tr>
               </thead>
-
               <tbody className="bg-white">
                 {filteredTransactions.length > 0 ? (
                   filteredTransactions.map((t, i) => (
                     <tr key={i} className="border-t hover:bg-purple-50 transition">
-                      {/* MONTH */}
                       <td className="p-4 font-semibold text-gray-800">
                         {t.month}
-                        <div className="text-sm text-gray-500">
-                          {t.date}
-                        </div>
+                        <div className="text-sm text-gray-500">{t.date}</div>
                       </td>
-
-                      {/* RECEIVED */}
                       <td className="p-4">
-                        <div className="space-y-2">
-                          {t.received.map((r, idx) => (
+                        {t.received.map((r, idx) => (
+                          <div
+                            key={idx}
+                            className="flex justify-between bg-green-100 text-green-800 px-3 py-1 rounded-lg"
+                          >
+                            <span>{r.item}</span>
+                            <span className="font-medium">{r.qty}</span>
+                          </div>
+                        ))}
+                      </td>
+                      <td className="p-4">
+                        {t.notReceived.length > 0 ? (
+                          t.notReceived.map((n, idx) => (
                             <div
                               key={idx}
-                              className="flex justify-between bg-green-100 text-green-800 px-3 py-1 rounded-lg"
+                              className="flex justify-between items-center bg-red-100 text-red-700 px-3 py-1 rounded-lg"
                             >
-                              <span>{r.item}</span>
-                              <span className="font-medium">{r.qty}</span>
+                              <span>{n.item}</span>
+                              <span className="font-medium">{n.qty}</span>
                             </div>
-                          ))}
-                        </div>
-                      </td>
-
-                      {/* NOT RECEIVED */}
-                      <td className="p-4">
-                        <div className="space-y-2">
-                          {t.notReceived.length > 0 ? (
-                            t.notReceived.map((n, idx) => (
-                              <div
-                                key={idx}
-                                className="flex justify-between items-center bg-red-100 text-red-700 px-3 py-1 rounded-lg"
-                              >
-                                <span>{n.item}</span>
-                                <span className="font-medium">{n.qty}</span>
-                              </div>
-                            ))
-                          ) : (
-                            <div className="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-lg font-medium">
-                              <CheckCircle2 className="w-5 h-5" />
-                              <span>No pending items</span>
-                            </div>
-                          )}
-
-                        </div>
+                          ))
+                        ) : (
+                          <div className="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-lg font-medium">
+                            <CheckCircle2 className="w-5 h-5" />
+                            <span>No pending items</span>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -453,12 +465,9 @@ export default function AuthorityUsers({ user, onLogout }) {
                 )}
               </tbody>
             </table>
-
-
           </div>
         </div>
       )}
-
     </div>
   );
 }

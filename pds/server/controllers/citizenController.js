@@ -36,6 +36,8 @@ exports.sendCitizenOTP = async (req, res) => {
     const login = await CitizenLogin.findOne({ rationId });
     if (!login) return res.status(404).json({ message: "Citizen not found" });
 
+    const profile = await CitizenProfile.findOne({ rationId });
+
     // Optional phone validation
     if (phone && login.phone !== phone) {
       return res.status(401).json({ message: "Phone number does not match Ration ID" });
@@ -44,20 +46,21 @@ exports.sendCitizenOTP = async (req, res) => {
     // Generate OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     otpStore.set(rationId, { otp, expiresAt: Date.now() + 5 * 60 * 1000 }); // 5 minutes
-
     console.log(`✅ OTP for ${rationId}: ${otp}`);
 
     res.json({
       message: "OTP sent successfully",
       rationId: login.rationId,
-      name: login.rationId,
-      phone: login.phone,
+      phone: login.phone,                 // send phone
+      fullName: profile?.fullName || "",  // send fullName
+      assignedShop: login.shopNo || null, // send assignedShop
     });
   } catch (err) {
     console.error("OTP Error:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 /* ---------- STEP 3: VERIFY OTP ---------- */
 exports.verifyCitizenOTP = async (req, res) => {
@@ -92,11 +95,14 @@ exports.verifyCitizenOTP = async (req, res) => {
 /* ---------- CITIZEN DASHBOARD DATA ---------- */
 exports.getCitizenData = async (req, res) => {
   try {
-    const rationId = req.citizen.rationId; // extracted from JWT middleware
+    const rationId = req.citizen.rationId; // from JWT middleware
+    const login = await CitizenLogin.findOne({ rationId }).lean();
+    const profile = await CitizenProfile.findOne({ rationId }).lean();
+    const family = await CitizenFamily.findOne({ rationId }).lean();
 
-    const login = await CitizenLogin.findOne({ rationId });
-    const profile = await CitizenProfile.findOne({ rationId });
-    const family = await CitizenFamily.findOne({ rationId });
+    console.log("DEBUG: login:", login);
+    console.log("DEBUG: profile:", profile);
+    console.log("DEBUG: family:", family);
 
     if (!login) return res.status(404).json({ message: "Citizen not found" });
 
@@ -117,3 +123,4 @@ exports.getCitizenData = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+

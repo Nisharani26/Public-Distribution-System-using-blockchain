@@ -9,7 +9,7 @@ const citizenAuthMiddleware = (req, res, next) => {
 
     // Attach citizen info from token to request
     req.citizen = {
-      citizenId: decoded.rationId,
+      rationId: decoded.rationId,
       role: decoded.role
     };
 
