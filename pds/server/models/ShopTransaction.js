@@ -1,18 +1,23 @@
+// backend/model/shopTransaction.js
 const mongoose = require("mongoose");
 
-const ShopTransactionSchema = new mongoose.Schema({
-  authorityId: { type: String, required: true },
-  shopNo: { type: String, required: true },
-  items: [
-    {
-      stockId: { type: String, required: true },
-      itemName: { type: String, required: true },
-      quantity: { type: Number, required: true },
-    },
-  ],
-  transactionDate: { type: Date, default: Date.now },
-});
+const shopTransactionSchema = new mongoose.Schema(
+  {
+    shopNo: { type: String, required: true },
+    transactionDate: { type: Date, default: Date.now },
+    items: [
+      {
+        stockId: { type: String, required: true },
+        itemName: { type: String, required: true },
+        quantity: { type: Number, required: true },
+      },
+    ],
+    allocatedBy: { type: String, default: "authority" }, // can store authorityId if needed
+  },
+  {
+    collection: "shopTransaction",
+    timestamps: true,
+  }
+);
 
-const ShopTransaction = mongoose.model("ShopTransaction", ShopTransactionSchema, "shopTransactions");
-
-module.exports = ShopTransaction;
+module.exports = mongoose.model("shopTransaction", shopTransactionSchema);

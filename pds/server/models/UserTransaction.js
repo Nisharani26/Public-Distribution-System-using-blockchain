@@ -13,6 +13,6 @@ const UserTransactionSchema = new mongoose.Schema({
   transactionDate: { type: Date, default: Date.now },
 });
 
-const UserTransaction = mongoose.model("UserTransaction", UserTransactionSchema, "userTransactions");
+const UserTransaction = mongoose.model("UserTransaction", UserTransactionSchema, "userTransaction");
 
 module.exports = UserTransaction;

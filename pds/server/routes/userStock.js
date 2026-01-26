@@ -1,16 +1,15 @@
 const express = require("express");
 const router = express.Router();
-const mongoose = require("mongoose");
 
-const UserStock = mongoose.model("userStock"); // collection: userStock
+const UserStock = require("../models/userStock");
 
-// Get all stock templates
+// GET stock template
 router.get("/template", async (req, res) => {
   try {
-    const stockItems = await UserStock.find({}); // fetch all items
-    res.json(stockItems); // returns array of stock items
+    const stockItems = await UserStock.find({}).lean();
+    res.status(200).json(stockItems);
   } catch (err) {
-    console.error(err);
+    console.error("Error fetching user stock:", err);
     res.status(500).json({ error: "Server error" });
   }
 });

@@ -7,7 +7,11 @@ const UserStockSchema = new mongoose.Schema(
     perFamilyQty: { type: Number, default: 0 },
     unit: { type: String, required: true },
   },
-  { collection: "userStock" }
+  {
+    collection: "userStock", // matches your MongoDB collection
+    timestamps: true,
+  }
 );
-console.log("User" ,{UserStockSchema})
+
+// IMPORTANT: Export the model directly
 module.exports = mongoose.model("userStock", UserStockSchema);

@@ -8,4 +8,5 @@ const shopLoginSchema = new mongoose.Schema({
   authorityId: { type: String, required: true }
 });
 
-module.exports = mongoose.model("ShopLogin", shopLoginSchema, "shopLogins");
+
+module.exports = mongoose.models.ShopLogin || mongoose.model("ShopLogin", shopLoginSchema, "shopLogins");

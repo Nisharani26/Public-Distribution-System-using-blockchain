@@ -11,6 +11,7 @@ export default function AuthorityUsers({ user, onLogout }) {
   const [selectedUser, setSelectedUser] = useState(null);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [transactions, setTransactions] = useState([]);
 
   /* ================= FETCH USERS ================= */
   useEffect(() => {
@@ -68,19 +69,20 @@ export default function AuthorityUsers({ user, onLogout }) {
       const token = localStorage.getItem("token");
 
       // Fetch stock template
-      const res = await fetch(`http://localhost:5000/api/userStock/template`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const stockTemplate = await res.json();
-
+      const resTemplate = await fetch(
+        `http://localhost:5000/api/userStock/template`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const stockTemplate = await resTemplate.json();
       const totalMembers = user.familyMembers?.length || 1;
 
-      // Calculate allocated items safely
+      // Calculate allocated items
       const allocatedItems = stockTemplate.map((item) => {
         const perMember = item.perMemberQty || 0;
         const perFamily = item.perFamilyQty || 0;
         const allocatedQty = perMember * totalMembers + perFamily;
-
         return {
           itemName: item.itemName || "Unknown",
           allocatedQty,
@@ -88,69 +90,38 @@ export default function AuthorityUsers({ user, onLogout }) {
         };
       });
 
-
       setSelectedUser({ ...user, allocatedItems });
       setShowDetails(true);
+
+      // Fetch user transactions
+      const resTransactions = await fetch(
+        `http://localhost:5000/api/transactions/${user.rationId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const dataTransactions = await resTransactions.json();
+      setTransactions(dataTransactions || []);
     } catch (err) {
       console.error(err);
       setSelectedUser({ ...user, allocatedItems: [] });
+      setTransactions([]);
       setShowDetails(true);
     }
   };
 
-
   const closeDetails = () => {
     setShowDetails(false);
     setSelectedUser(null);
+    setTransactions([]);
     setFromDate("");
     setToDate("");
   };
 
-  /* ================= TRANSACTIONS (SAMPLE STATIC DATA) ================= */
-  const allTransactions = [
-    {
-      month: "January 2025",
-      date: "2025-01-05",
-      received: [
-        { item: "Rice", qty: "5 kg" },
-        { item: "Wheat", qty: "3 kg" },
-        { item: "Sugar", qty: "1 kg" },
-      ],
-      notReceived: [],
-    },
-    {
-      month: "February 2025",
-      date: "2025-02-08",
-      received: [{ item: "Rice", qty: "5 kg" }],
-      notReceived: [
-        { item: "Wheat", qty: "3 kg" },
-        { item: "Sugar", qty: "1 kg" },
-      ],
-    },
-    {
-      month: "March 2025",
-      date: "2025-03-10",
-      received: [
-        { item: "Rice", qty: "5 kg" },
-        { item: "Sugar", qty: "1 kg" },
-      ],
-      notReceived: [{ item: "Wheat", qty: "3 kg" }],
-    },
-    {
-      month: "April 2025",
-      date: "2025-04-06",
-      received: [],
-      notReceived: [
-        { item: "Rice", qty: "5 kg" },
-        { item: "Wheat", qty: "3 kg" },
-        { item: "Sugar", qty: "1 kg" },
-      ],
-    },
-  ];
-
-  const filteredTransactions = allTransactions.filter((t) => {
-    if (fromDate && t.date < fromDate) return false;
-    if (toDate && t.date > toDate) return false;
+  /* ================= FILTER TRANSACTIONS BY DATE ================= */
+  const filteredTransactions = transactions.filter((t) => {
+    if (fromDate && new Date(t.transactionDate) < new Date(fromDate)) return false;
+    if (toDate && new Date(t.transactionDate) > new Date(toDate)) return false;
     return true;
   });
 
@@ -382,13 +353,22 @@ export default function AuthorityUsers({ user, onLogout }) {
                 </tr>
               </thead>
               <tbody>
-                {(selectedUser.allocatedItems || []).map((item, idx) => (
-                  <tr key={idx}>
-                    <td className="border p-2">{item.itemName}</td>
-                    <td className="border p-2">{item.allocatedQty}</td>
-                    <td className="border p-2">{item.unit}</td>
+                {selectedUser.allocatedItems &&
+                  selectedUser.allocatedItems.length > 0 ? (
+                  selectedUser.allocatedItems.map((item, idx) => (
+                    <tr key={idx}>
+                      <td className="border p-2">{item.itemName}</td>
+                      <td className="border p-2">{item.allocatedQty}</td>
+                      <td className="border p-2">{item.unit}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="3" className="border p-4 text-center text-gray-500">
+                      No allocation template configured
+                    </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
 
@@ -412,59 +392,51 @@ export default function AuthorityUsers({ user, onLogout }) {
             <table className="w-full border rounded-xl overflow-hidden shadow">
               <thead className="bg-gradient-to-r from-purple-600 to-purple-500 text-white">
                 <tr>
-                  <th className="p-4 text-left">Month</th>
+                  <th className="p-4 text-left">Date</th>
                   <th className="p-4 text-left">Items Received</th>
-                  <th className="p-4 text-left">Items Not Received</th>
                 </tr>
               </thead>
               <tbody className="bg-white">
                 {filteredTransactions.length > 0 ? (
-                  filteredTransactions.map((t, i) => (
-                    <tr key={i} className="border-t hover:bg-purple-50 transition">
-                      <td className="p-4 font-semibold text-gray-800">
-                        {t.month}
-                        <div className="text-sm text-gray-500">{t.date}</div>
-                      </td>
-                      <td className="p-4">
-                        {t.received.map((r, idx) => (
-                          <div
-                            key={idx}
-                            className="flex justify-between bg-green-100 text-green-800 px-3 py-1 rounded-lg"
-                          >
-                            <span>{r.item}</span>
-                            <span className="font-medium">{r.qty}</span>
-                          </div>
-                        ))}
-                      </td>
-                      <td className="p-4">
-                        {t.notReceived.length > 0 ? (
-                          t.notReceived.map((n, idx) => (
-                            <div
-                              key={idx}
-                              className="flex justify-between items-center bg-red-100 text-red-700 px-3 py-1 rounded-lg"
-                            >
-                              <span>{n.item}</span>
-                              <span className="font-medium">{n.qty}</span>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-lg font-medium">
-                            <CheckCircle2 className="w-5 h-5" />
-                            <span>No pending items</span>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))
+                  filteredTransactions.map((t, i) => {
+                    const receivedItems = t.items || [];
+                    return (
+                      <tr key={i} className="border-t hover:bg-purple-50 transition">
+                        <td className="p-4 font-semibold text-gray-800">
+                          {new Date(t.transactionDate).toLocaleDateString("en-GB", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </td>
+                        <td className="p-4">
+                          {receivedItems.length > 0 ? (
+                            receivedItems.map((r, idx) => (
+                              <div
+                                key={idx}
+                                className="flex justify-between bg-green-100 text-green-800 px-3 py-1 rounded-lg"
+                              >
+                                <span>{r.itemName}</span>
+                                <span className="font-medium">{r.quantity} {r.unit || ""}</span>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-gray-500">No items received</div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
-                    <td colSpan="3" className="text-center p-6 text-gray-500">
+                    <td colSpan="2" className="text-center p-6 text-gray-500">
                       No transactions in selected date range
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
+
           </div>
         </div>
       )}
