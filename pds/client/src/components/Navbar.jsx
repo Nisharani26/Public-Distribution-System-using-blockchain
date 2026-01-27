@@ -38,11 +38,12 @@ export default function Navbar({ userName, role, onLogout }) {
   ];
 
   const shopkeeperLinks = [
-    { path: "/shopkeeper/dashboard", label: "Dashboard", icon: Home },
-    { path: "/shopkeeper/weight-monitor", label: "Weight Monitor", icon: Scale },
-    { path: "/shopkeeper/transactions", label: "Transaction History", icon: History },
-    { path: "/shopkeeper/profile", label: "Profile", icon: User }
-  ];
+  { path: "/shopkeeper/dashboard", label: "Dashboard", icon: Home },
+  { path: "/shopkeeper/users", label: "Users", icon: User },
+  { path: "/shopkeeper/transactions", label: "Transaction History", icon: History },
+  { path: "/shopkeeper/profile", label: "Profile", icon: User }
+];
+
 
   const authorityLinks = [
     { path: "/authority/dashboard", label: "Dashboard", icon: Home },

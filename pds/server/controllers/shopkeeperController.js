@@ -1,7 +1,9 @@
-const { ShopkeeperLogin, ShopkeeperStock } = require("../models/Shop");
+// backend/controllers/shopkeeperController.js
+const ShopLogin = require("../models/ShopLogin");
+const ShopStock = require("../models/shopStock");
 const jwt = require("jsonwebtoken");
 
-// In-memory OTP storage (same as citizen)
+// In-memory OTP storage
 const otpStore = new Map();
 
 /* ---------- STEP 1: VERIFY SHOP NO ---------- */
@@ -9,7 +11,7 @@ exports.shopkeeperLogin = async (req, res) => {
   const { shopNo } = req.body;
 
   try {
-    const login = await ShopkeeperLogin.findOne({ shopNo });
+    const login = await ShopLogin.findOne({ shopNo });
     if (!login)
       return res.status(401).json({ message: "Invalid Shop Number" });
 
@@ -17,7 +19,7 @@ exports.shopkeeperLogin = async (req, res) => {
       message: "Shop verified. Proceed to OTP.",
       shopNo: login.shopNo,
       phone: login.phone,
-      name: login.name,
+      name: login.shopName,
     });
   } catch (err) {
     console.error("Shopkeeper Login error:", err);
@@ -30,7 +32,7 @@ exports.sendShopkeeperOTP = async (req, res) => {
   const { shopNo } = req.body;
 
   try {
-    const login = await ShopkeeperLogin.findOne({ shopNo });
+    const login = await ShopLogin.findOne({ shopNo });
     if (!login)
       return res.status(404).json({ message: "Shopkeeper not found" });
 
@@ -43,7 +45,7 @@ exports.sendShopkeeperOTP = async (req, res) => {
       message: "OTP sent successfully",
       shopNo: login.shopNo,
       phone: login.phone,
-      name: login.name,
+      name: login.shopName,
     });
   } catch (err) {
     console.error("OTP Error:", err);
@@ -67,7 +69,7 @@ exports.verifyShopkeeperOTP = async (req, res) => {
   if (storedData.otp !== otp)
     return res.status(401).json({ message: "Invalid OTP" });
 
-  const login = await ShopkeeperLogin.findOne({ shopNo });
+  const login = await ShopLogin.findOne({ shopNo });
   if (!login)
     return res.status(404).json({ message: "Shopkeeper not found" });
 
@@ -88,20 +90,23 @@ exports.getShopkeeperData = async (req, res) => {
   try {
     const shopNo = req.shopkeeper.shopNo;
 
-    const login = await ShopkeeperLogin.findOne({ shopNo });
-    const stock = await ShopkeeperStock.findOne({ shopNo });
+    const login = await ShopLogin.findOne({ shopNo }).select("-password");
+    const stock = await ShopStock.findOne({ shopNo });
 
     if (!login)
       return res.status(404).json({ message: "Shopkeeper not found" });
 
+    // Count assigned users
+    const totalUsers = await require("../models/shopUsers").ShopUserLogin.countDocuments({ shopNo });
+
     res.json({
-      message: `Welcome ${login.name}`,
-      shopkeeper: {
-        shopNo: login.shopNo,
-        phone: login.phone,
-        name: login.name,
-        stock: stock || {},
-      },
+      name: login.shopName,
+      shopId: login.shopNo,
+      phone: login.phone,
+      address: login.address,
+      owner: login.shopOwnerName,
+      totalUsers,
+      stock: stock || {},
     });
   } catch (err) {
     console.error("Error fetching shopkeeper data:", err);

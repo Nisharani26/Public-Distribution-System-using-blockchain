@@ -1,40 +1,55 @@
+// backend/routes/shopRoutes.js
 const express = require("express");
 const router = express.Router();
-const shopkeeperAuthMiddleware = require("../middleware/ShopkeeperMiddleware");
-const ShopLogin = require("../models/shopLogin");
+const shopkeeperAuthMiddleware = require("../middleware/shopkeeperMiddleware");
+const ShopLogin = require("../models/ShopLogin");
+const ShopProfile = require("../models/ShopProfile"); // Add this
+const { ShopUserLogin } = require("../models/shopUsers");
 
+// Controllers
 const {
   shopkeeperLogin,
   sendShopkeeperOTP,
   verifyShopkeeperOTP,
-  getShopkeeperData,
 } = require("../controllers/shopkeeperController");
 
+// ---------------- LOGIN ----------------
 router.post("/login", shopkeeperLogin);
+
+// ---------------- SEND OTP ----------------
 router.post("/send-otp", sendShopkeeperOTP);
+
+// ---------------- VERIFY OTP ----------------
 router.post("/verify-otp", verifyShopkeeperOTP);
-router.get("/dashboard", shopkeeperAuthMiddleware, getShopkeeperData);
-// GET shops for a specific authority
-router.get("/authority/:authorityId", async (req, res) => {
+
+// ---------------- SHOPKEEPER PROFILE ----------------
+router.get("/profile", shopkeeperAuthMiddleware, async (req, res) => {
   try {
-    const authorityId = req.params.authorityId;
-    const shops = await ShopLogin.find({ authorityId });
-    res.json(shops);
+    const shopNo = req.shopkeeper.shopNo;
+
+    // Fetch login info
+    const login = await ShopLogin.findOne({ shopNo }).select("-password");
+    if (!login) return res.status(404).json({ message: "Shop not found" });
+
+    // Fetch profile info
+    const profile = await ShopProfile.findOne({ shopNo });
+
+    // Count assigned users
+    const totalUsers = await ShopUserLogin.countDocuments({ shopNo });
+
+    res.status(200).json({
+      name: login.shopName,             // Shop name
+      shopId: login.shopNo,             // Shop number
+      phone: login.phone,               // Shop phone
+      owner: login.shopOwnerName,       // Shop owner
+      totalUsers,                       // Assigned users
+      address: profile?.address || "N/A",   // From ShopProfile
+      district: profile?.district || "N/A", // From ShopProfile
+      state: profile?.state || "N/A",       // From ShopProfile
+    });
   } catch (err) {
-    console.error("Failed to fetch shops:", err);
-    res.status(500).json({ message: "Failed to fetch shops" });
-  }
-});
-// Get shop by shopNo
-router.get("/shop/:shopNo", async (req, res) => {
-  try {
-    const shopNo = req.params.shopNo;
-    const shop = await ShopLogin.findOne({ shopNo });
-    if (!shop) return res.status(404).json({ message: "Shop not found" });
-    res.json(shop);
-  } catch (err) {
-    console.error("Failed to fetch shop:", err);
-    res.status(500).json({ message: "Failed to fetch shop" });
+    console.error("PROFILE ERROR:", err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 

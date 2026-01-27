@@ -18,7 +18,7 @@ import CitizenTransactionHistory from "./pages/CitizenTransactionHistory";
 import ShopkeeperDashboard from "./pages/ShopkeeperDashboard";
 import ShopkeeperProfile from "./pages/ShopkeeperProfile";
 import ShopkeeperTransactionHistory from "./pages/ShopkeeperTransactionHistory";
-import ShopkeeperWeightMonitor from "./pages/ShopkeeperWeightMonitor";
+import ShopkeeperUsers from "./pages/ShopkeeperUsers";
 
 export default function App() {
   const [user, setUser] = useState(() => {
@@ -69,7 +69,7 @@ export default function App() {
         <Route path="/authority/audit" element={<AuthorityAudit user={user} onLogout={handleLogout} />} />
 
         {/* Citizen routes */}
-        <Route path="/citizen/dashboard" element={user?.role === "citizen" ? <CitizenDashboard user={user} onLogout={handleLogout}  /> : <Navigate to="/" replace />} />
+        <Route path="/citizen/dashboard" element={user?.role === "citizen" ? <CitizenDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
         <Route path="/citizen/profile" element={user?.role === "citizen" ? <CitizenProfile user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
         <Route path="/citizen/transactions" element={user?.role === "citizen" ? <CitizenTransactionHistory user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
 
@@ -77,8 +77,10 @@ export default function App() {
         <Route path="/shopkeeper/dashboard" element={user?.role === "shopkeeper" ? <ShopkeeperDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
         <Route path="/shopkeeper/profile" element={user?.role === "shopkeeper" ? <ShopkeeperProfile user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
         <Route path="/shopkeeper/transactions" element={user?.role === "shopkeeper" ? <ShopkeeperTransactionHistory user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
-        <Route path="/shopkeeper/weight-monitor" element={user?.role === "shopkeeper" ? <ShopkeeperWeightMonitor user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
-
+        <Route
+          path="/shopkeeper/users"
+          element={user?.role === "shopkeeper" ? <ShopkeeperUsers user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />}
+        />
         {/* Catch-all */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

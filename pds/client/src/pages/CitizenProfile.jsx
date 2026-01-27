@@ -50,8 +50,6 @@ export default function CitizenProfile({ user, onLogout }) {
           let qty = 0;
           if (item.perMemberQty != null) {
             qty = item.perMemberQty * totalMembers;
-          } else if (item.perFamilyQty != null) {
-            qty = item.perFamilyQty;
           }
           return {
             itemName: item.itemName,
