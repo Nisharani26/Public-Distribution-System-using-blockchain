@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
-import { Users, Search, Eye, Building2, CheckCircle2 } from "lucide-react";
+import { Users, Search, Eye, Building2 } from "lucide-react";
 
 export default function AuthorityUsers({ user, onLogout }) {
   const [users, setUsers] = useState([]);
@@ -12,31 +12,21 @@ export default function AuthorityUsers({ user, onLogout }) {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [transactions, setTransactions] = useState([]);
+  const [detailsLoading, setDetailsLoading] = useState(false);
 
-  /* ================= FETCH USERS ================= */
+  // ================= FETCH USERS =================
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         const token = localStorage.getItem("token");
-
         const res = await fetch(
           "http://localhost:5000/api/auth/authUsers/all",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
-
         const data = await res.json();
-
-        if (Array.isArray(data)) {
-          setUsers(data);
-        } else if (Array.isArray(data.users)) {
-          setUsers(data.users);
-        } else {
-          setUsers([]);
-        }
+        if (Array.isArray(data)) setUsers(data);
+        else if (Array.isArray(data.users)) setUsers(data.users);
+        else setUsers([]);
       } catch (err) {
         console.error("Error fetching users:", err);
         setUsers([]);
@@ -44,18 +34,20 @@ export default function AuthorityUsers({ user, onLogout }) {
         setLoading(false);
       }
     };
-
     fetchUsers();
   }, []);
 
-  /* ================= FILTERING ================= */
+  // ================= FILTERING =================
   const filteredUsers = users.filter((u) => {
     const matchesSearch =
-      (u.fullName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (u.rationId || "").toLowerCase().includes(searchQuery.toLowerCase());
+      (u.fullName || "")
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
+      (u.rationId || "")
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
 
     const matchesShop = filterShop === "all" || u.shopNo === filterShop;
-
     return matchesSearch && matchesShop;
   });
 
@@ -63,22 +55,20 @@ export default function AuthorityUsers({ user, onLogout }) {
     new Set(users.map((u) => u.shopNo).filter(Boolean))
   ).sort();
 
-  /* ================= VIEW DETAILS ================= */
+  // ================= VIEW DETAILS =================
   const handleViewDetails = async (user) => {
     try {
+      setDetailsLoading(true);
       const token = localStorage.getItem("token");
 
-      // Fetch stock template
-      const resTemplate = await fetch(
+      // Fetch allocated items from shopStock template
+      const resStock = await fetch(
         `http://localhost:5000/api/userStock/template`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      const stockTemplate = await resTemplate.json();
+      const stockTemplate = await resStock.json();
       const totalMembers = user.familyMembers?.length || 1;
 
-      // Calculate allocated items
       const allocatedItems = stockTemplate.map((item) => {
         const perMember = item.perMemberQty || 0;
         const perFamily = item.perFamilyQty || 0;
@@ -93,12 +83,10 @@ export default function AuthorityUsers({ user, onLogout }) {
       setSelectedUser({ ...user, allocatedItems });
       setShowDetails(true);
 
-      // Fetch user transactions
+      // Fetch transactions for the user
       const resTransactions = await fetch(
-        `http://localhost:5000/api/transactions/${user.rationId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        `http://localhost:5000/api/transactions/user/${user.rationId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       const dataTransactions = await resTransactions.json();
       setTransactions(dataTransactions || []);
@@ -107,6 +95,8 @@ export default function AuthorityUsers({ user, onLogout }) {
       setSelectedUser({ ...user, allocatedItems: [] });
       setTransactions([]);
       setShowDetails(true);
+    } finally {
+      setDetailsLoading(false);
     }
   };
 
@@ -118,14 +108,29 @@ export default function AuthorityUsers({ user, onLogout }) {
     setToDate("");
   };
 
-  /* ================= FILTER TRANSACTIONS BY DATE ================= */
+  // ================= FILTER TRANSACTIONS BY DATE =================
   const filteredTransactions = transactions.filter((t) => {
-    if (fromDate && new Date(t.transactionDate) < new Date(fromDate)) return false;
+    if (fromDate && new Date(t.transactionDate) < new Date(fromDate))
+      return false;
     if (toDate && new Date(t.transactionDate) > new Date(toDate)) return false;
     return true;
   });
 
-  /* ================= UI ================= */
+  // ================= SAFE FAMILY MEMBERS =================
+  const family = selectedUser
+    ? selectedUser.familyMembers && selectedUser.familyMembers.length > 0
+      ? selectedUser.familyMembers
+      : [
+          {
+            memberName: selectedUser.fullName || "-",
+            relation: "Self",
+            age: selectedUser.age || "-",
+            gender: selectedUser.gender || "-",
+          },
+        ]
+    : [];
+
+  // ================= UI =================
   return (
     <div className="min-h-screen bg-gray-100">
       <Navbar
@@ -226,42 +231,23 @@ export default function AuthorityUsers({ user, onLogout }) {
                   </th>
                 </tr>
               </thead>
-
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredUsers.map((u, index) => (
-                  <tr
-                    key={index}
-                    className="hover:bg-blue-50 transition-colors"
-                  >
+                  <tr key={index} className="hover:bg-blue-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center">
                         <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                           <Users className="w-5 h-5 text-blue-600" />
                         </div>
                         <div className="ml-4">
-                          <div className="font-medium text-gray-900">
-                            {u.fullName}
-                          </div>
+                          <div className="font-medium text-gray-900">{u.fullName}</div>
                         </div>
                       </div>
                     </td>
-
-                    <td className="px-6 py-4 text-sm font-mono text-gray-900">
-                      {u.rationId}
-                    </td>
-
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      +91 {u.phone}
-                    </td>
-
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                      {u.shopNo}
-                    </td>
-
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      {u.familyMembers?.length || 1} members
-                    </td>
-
+                    <td className="px-6 py-4 text-sm font-mono text-gray-900">{u.rationId}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">+91 {u.phone}</td>
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{u.shopNo}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">{u.familyMembers?.length || 1} members</td>
                     <td className="px-6 py-4 text-sm">
                       <button
                         onClick={() => handleViewDetails(u)}
@@ -277,9 +263,7 @@ export default function AuthorityUsers({ user, onLogout }) {
             </table>
           </div>
 
-          {loading && (
-            <div className="text-center py-6">Loading users...</div>
-          )}
+          {loading && <div className="text-center py-6">Loading users...</div>}
 
           {!loading && filteredUsers.length === 0 && (
             <div className="text-center py-12">
@@ -301,9 +285,7 @@ export default function AuthorityUsers({ user, onLogout }) {
               ✕
             </button>
 
-            <h2 className="text-2xl font-bold text-purple-700 mb-6">
-              Citizen Detailed Profile
-            </h2>
+            <h2 className="text-2xl font-bold text-purple-700 mb-6">Citizen Detailed Profile</h2>
 
             {/* BASIC INFO */}
             <div className="grid grid-cols-2 gap-6 mb-6">
@@ -331,7 +313,7 @@ export default function AuthorityUsers({ user, onLogout }) {
                 </tr>
               </thead>
               <tbody>
-                {(selectedUser.familyMembers || []).map((m, i) => (
+                {family.map((m, i) => (
                   <tr key={i}>
                     <td className="border p-2">{m.memberName}</td>
                     <td className="border p-2">{m.relation}</td>
@@ -353,8 +335,7 @@ export default function AuthorityUsers({ user, onLogout }) {
                 </tr>
               </thead>
               <tbody>
-                {selectedUser.allocatedItems &&
-                  selectedUser.allocatedItems.length > 0 ? (
+                {selectedUser.allocatedItems && selectedUser.allocatedItems.length > 0 ? (
                   selectedUser.allocatedItems.map((item, idx) => (
                     <tr key={idx}>
                       <td className="border p-2">{item.itemName}</td>
@@ -412,10 +393,7 @@ export default function AuthorityUsers({ user, onLogout }) {
                         <td className="p-4">
                           {receivedItems.length > 0 ? (
                             receivedItems.map((r, idx) => (
-                              <div
-                                key={idx}
-                                className="flex justify-between bg-green-100 text-green-800 px-3 py-1 rounded-lg"
-                              >
+                              <div key={idx} className="flex justify-between bg-green-100 text-green-800 px-3 py-1 rounded-lg">
                                 <span>{r.itemName}</span>
                                 <span className="font-medium">{r.quantity} {r.unit || ""}</span>
                               </div>
@@ -436,7 +414,6 @@ export default function AuthorityUsers({ user, onLogout }) {
                 )}
               </tbody>
             </table>
-
           </div>
         </div>
       )}
