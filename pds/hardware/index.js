@@ -1,12 +1,14 @@
 const express = require("express");
 const cors = require("cors");
-let latestWeight = null;
 
 const app = express();
+
+let latestWeight = null;
 
 app.use(cors());
 app.use(express.json());
 
+// Raspberry Pi sends weight here
 app.post("/api/weight", (req, res) => {
   const { weight, unit, deviceId } = req.body;
 
@@ -17,22 +19,27 @@ app.post("/api/weight", (req, res) => {
     time: new Date()
   };
 
-  console.log("----- DATA FROM RASPBERRY PI -----");
+  console.log("📡 DATA FROM RASPBERRY PI");
   console.log(latestWeight);
-  console.log("---------------------------------");
 
   res.json({ status: "received" });
 });
 
+// Frontend fetches weight here
 app.get("/api/weight", (req, res) => {
   if (!latestWeight) {
-    return res.json({ message: "No data yet" });
+    return res.status(204).json({ message: "Waiting for weight" });
   }
-  res.json(latestWeight);
-});
 
+  const data = latestWeight;
+
+  // 🔁 IMPORTANT: reset after fetch
+  latestWeight = null;
+
+  res.json(data);
+});
 
 const PORT = 5001;
 app.listen(PORT, () => {
-  console.log(`Hardware server running on port ${PORT}`);
+  console.log(`⚙️ Hardware server running on port ${PORT}`);
 });

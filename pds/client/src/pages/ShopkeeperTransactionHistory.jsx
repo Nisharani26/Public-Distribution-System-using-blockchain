@@ -156,8 +156,7 @@ export default function ShopkeeperTransactionHistory({ user, onLogout }) {
                   </td>
 
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {transaction.userName && <div className="font-medium text-gray-900">{transaction.userName}</div>}
-                    <div className="text-xs text-gray-500 font-mono">{transaction.rationId}</div>
+                    <div className="text-lg text-gray-500 font-mono">{transaction.rationId}</div>
                   </td>
 
                   <td className="px-6 py-4 whitespace-nowrap">

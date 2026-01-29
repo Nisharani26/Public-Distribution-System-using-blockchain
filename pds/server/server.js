@@ -22,7 +22,7 @@ app.use("/api/auth", require("./routes/authRoutes"));
 // Citizen
 app.use("/api/citizen", require("./routes/citizenRoutes"));
 app.use("/api/complaints", require("./routes/userComplaintRoutes"));
-app.use("/api/user-request", require("./routes/userRequest"));
+app.use("/api/userRequests", require("./routes/userRequest"));
 app.use("/api/userStock", require("./routes/userStock"));
 app.use("/api/transactions", require("./routes/userTransaction"));
 
@@ -35,9 +35,6 @@ app.use("/api/shopTransaction", require("./routes/shopTransaction"));
 // Shop Users (Citizen by Shop)
 app.use("/api/shopUsers", require("./routes/shopUserRoute"));
 
-// =======================
-// SERVER
-// =======================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);

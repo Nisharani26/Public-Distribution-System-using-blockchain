@@ -30,5 +30,20 @@ router.get("/myRequests/:rationId", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch requests" });
   }
 });
+router.put("/mark-received/:rationId", async (req, res) => {
+  try {
+    const { rationId } = req.params;
+
+    await UserRequest.updateMany(
+      { rationId, status: "Pending" },
+      { $set: { status: "Received" } }
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to update request status" });
+  }
+});
 
 module.exports = router;

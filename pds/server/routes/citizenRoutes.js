@@ -66,4 +66,26 @@ router.get("/family/:rationId", citizenAuthMiddleware, async (req, res) => {
   }
 });
 
+// GET citizen full info (shopkeeper version, no auth)
+router.get("/shopkeeper/profile/:rationId", async (req, res) => {
+  try {
+    const profile = await CitizenProfile.findOne({ rationId: req.params.rationId }).lean();
+    const login = await CitizenLogin.findOne({ rationId: req.params.rationId }).lean();
+    const family = await CitizenFamily.findOne({ rationId: req.params.rationId }).lean();
+
+    if (!profile || !login) return res.status(404).json({ message: "Citizen not found" });
+
+    res.json({
+      ...profile,
+      phone: login.phone,
+      assignedShop: login.shopNo || "Not Assigned",
+      familyMembers: family?.members || [],
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
 module.exports = router;

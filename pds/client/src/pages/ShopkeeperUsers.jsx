@@ -1,89 +1,186 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import { Users, Search, Eye, X, Check } from "lucide-react";
-
-// Dummy users data
-const USERS = [
-  { rationId: "RAT123456", name: "Rajesh Kumar", phone: "9876543210", status: "Requested" },
-  { rationId: "RAT123457", name: "Priya Sharma", phone: "9123456780", status: "Taken" },
-  { rationId: "RAT123458", name: "Amit Patel", phone: "9988776655", status: "Not Taken" },
-  { rationId: "RAT123459", name: "Sunita Devi", phone: "9090909090", status: "Requested" },
-];
-
-// Dummy entitlements
-const DUMMY_ENTITLEMENTS = [
-  { itemName: "Wheat", allocatedQty: 20, unit: "kg" },
-  { itemName: "Rice", allocatedQty: 15, unit: "kg" },
-];
-
-// Dummy requested items
-const DUMMY_REQUESTS = [
-  { itemName: "Wheat", requestedQty: 10, status: "Pending", weight: null, verified: false },
-  { itemName: "Rice", requestedQty: 15, status: "Pending", weight: null, verified: false },
-];
-
-// Dummy transactions
-const DUMMY_TRANSACTIONS = [
-  { date: "2026-01-05", itemName: "Wheat", quantity: 5 },
-  { date: "2026-01-15", itemName: "Rice", quantity: 10 },
-];
+import axios from "axios";
 
 export default function ShopkeeperUsers({ user, onLogout }) {
+  const [users, setUsers] = useState([]);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("All");
   const [modalUser, setModalUser] = useState(null);
+  const [familyMembers, setFamilyMembers] = useState([]);
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [otp, setOtp] = useState("");
   const [requests, setRequests] = useState([]);
+  const [verifiedRequests, setVerifiedRequests] = useState([]); // Show after OTP
+  const [entitlements, setEntitlements] = useState([]);
+  const [transactions, setTransactions] = useState([]);
 
-  const filteredUsers = USERS.filter((u) => {
-    const matchSearch =
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.rationId.toLowerCase().includes(search.toLowerCase());
-    const matchFilter = filter === "All" || u.status === filter;
-    return matchSearch && matchFilter;
-  });
+  // Fetch all users for this shop
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const shopNo = user?.shopNo;
+        if (!shopNo) return;
 
-  const handleAcceptRequests = () => {
-    setShowOtpInput(true);
+        const res = await axios.get(`http://localhost:5000/api/shopUsers/${shopNo}/all`);
+        setUsers(res.data);
+      } catch (err) {
+        console.error("Error fetching users:", err);
+      }
+    };
+    fetchUsers();
+  }, [user]);
+
+  // Fetch full citizen info (profile + family) when clicking "View"
+  const fetchCitizenDetails = async (rationId) => {
+    try {
+      const res = await axios.get(`http://localhost:5000/api/citizen/shopkeeper/profile/${rationId}`);
+      setModalUser(res.data);
+      setFamilyMembers(res.data.familyMembers || []);
+
+      const stockRes = await axios.get("http://localhost:5000/api/userStock/template");
+      setEntitlements(stockRes.data);
+
+      const requestsRes = await axios.get(`http://localhost:5000/api/userRequests/myRequests/${rationId}`);
+      setRequests(requestsRes.data.map(r => ({ ...r, weight: null, verified: false })));
+      setVerifiedRequests([]);
+
+      const transactionsRes = await axios.get(`http://localhost:5000/api/transactions/user/${rationId}`);
+      const flatTransactions = [];
+      transactionsRes.data.forEach(t => {
+        if (t.items && Array.isArray(t.items)) {
+          t.items.forEach(item => {
+            flatTransactions.push({
+              ...t,
+              itemName: item.itemName,
+              quantity: item.quantity,
+              transactionDate: t.transactionDate
+            });
+          });
+        } else {
+          flatTransactions.push(t);
+        }
+      });
+      setTransactions(flatTransactions);
+
+    } catch (err) {
+      console.error("Failed to fetch user details:", err.response ? err.response.data : err.message);
+      alert("Failed to fetch user details.");
+    }
   };
 
-  const handleOtpSubmit = () => {
-    if (!otp) {
-      alert("Enter OTP first!");
+  /* Handle accepting requests -> generate OTP via backend */
+  const handleAcceptRequests = async () => {
+    try {
+      const res = await axios.post(`http://localhost:5000/api/shopUsers/generateOtp/${modalUser.rationId}`);
+      setShowOtpInput(true);
+      alert("OTP has been generated. Check server terminal."); // frontend info
+    } catch (err) {
+      console.error(err);
+      alert("Failed to generate OTP.");
+    }
+  };
+
+  /* Handle OTP submission -> verify via backend */
+  const handleOtpSubmit = async () => {
+    if (!otp) return alert("Enter OTP!");
+    try {
+      const res = await axios.post(`http://localhost:5000/api/shopUsers/verifyOtp/${modalUser.rationId}`, { otp });
+      if (res.data.success) {
+        setVerifiedRequests(requests); // show items
+        setShowOtpInput(false);
+        setOtp("");
+        alert("OTP verified. Requested items are now visible.");
+      } else {
+        alert("Invalid OTP!");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("OTP verification failed.");
+    }
+  };
+
+ const fetchWeight = async (idx) => {
+  try {
+    const res = await fetch("http://localhost:5001/api/weight");
+    const data = await res.json();
+
+    if (data.message) {
+      alert("Weight data abhi nahi aaya");
       return;
     }
-    // Load requested items without weight yet
-    const loadedRequests = DUMMY_REQUESTS.map((r) => ({ ...r, weight: null }));
-    setRequests(loadedRequests);
-    setShowOtpInput(false);
-  };
 
-  // Fetch weight on button click
-  const fetchWeight = (idx) => {
-    const updated = [...requests];
-    updated[idx].weight = Math.min(updated[idx].requestedQty, Math.floor(Math.random() * updated[idx].requestedQty) + 1);
-    setRequests(updated);
-  };
+    const updated = [...verifiedRequests];
+    updated[idx].weight = data.weight; // ✅ store in item
+    setVerifiedRequests(updated);
 
+  } catch (err) {
+    console.error("Error fetching weight", err);
+    alert("Failed to fetch weight");
+  }
+};
+
+
+
+
+
+  /* Verify a requested item */
   const verifyItem = (idx) => {
-    const updated = [...requests];
+    const updated = [...verifiedRequests];
     updated[idx].verified = true;
-    setRequests(updated);
+    setVerifiedRequests(updated);
   };
 
-  const allVerified = requests.length > 0 && requests.every((r) => r.verified);
+  const allVerified = verifiedRequests.length > 0 && verifiedRequests.every(r => r.verified);
 
-  const handleSubmitAll = () => {
-    if (!allVerified) {
-      alert("Verify all items first!");
-      return;
-    }
-    alert(`All requests for ${modalUser.name} submitted successfully!`);
+  /* Submit all verified items */
+  const handleSubmitAll = async () => {
+  if (!allVerified) return alert("Verify all items first!");
+
+  try {
+    const items = verifiedRequests.map(r => ({
+      stockId: r.stockId || r._id,
+      itemName: r.itemName,
+      quantity: r.weight, // 🔥 actual measured weight
+    }));
+
+    // 1️⃣ Save transaction
+    await axios.post("http://localhost:5000/api/transactions/create", {
+      shopNo: user.shopNo,
+      rationId: modalUser.rationId,
+      items,
+    });
+
+    // 2️⃣ Update request status
+    await axios.put(
+      `http://localhost:5000/api/userRequests/mark-received/${modalUser.rationId}`
+    );
+
+    alert("Transaction completed successfully!");
+
+    // RESET UI
     setModalUser(null);
-    setOtp("");
     setRequests([]);
-  };
+    setVerifiedRequests([]);
+    setFamilyMembers([]);
+    setOtp("");
+
+  } catch (err) {
+    console.error(err);
+    alert("Failed to submit transaction");
+  }
+};
+
+
+  /* Filter users based on search query */
+  const filteredUsers = users.filter(
+    (u) =>
+      u.rationId.toLowerCase().includes(search.toLowerCase()) ||
+      (u.fullName || "").toLowerCase().includes(search.toLowerCase())
+  );
+
+  /* Total family members excluding self */
+  const totalMembers = (familyMembers?.length || 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -101,15 +198,12 @@ export default function ShopkeeperUsers({ user, onLogout }) {
           </p>
         </div>
 
-        {/* Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
-          <StatCard title="Total Users" value={USERS.length} />
-          <StatCard title="Requested" value={USERS.filter(u => u.status === "Requested").length} />
-          <StatCard title="Stock Taken" value={USERS.filter(u => u.status === "Taken").length} />
-          <StatCard title="Not Taken" value={USERS.filter(u => u.status === "Not Taken").length} />
+        {/* Total Users */}
+        <div className="grid grid-cols-1 sm:grid-cols-1 gap-4 mb-6">
+          <StatCard title="Total Users" value={users.length} />
         </div>
 
-        {/* Search & Filter */}
+        {/* Search Bar */}
         <div className="bg-white p-4 rounded-lg shadow flex flex-col md:flex-row gap-4 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -121,17 +215,6 @@ export default function ShopkeeperUsers({ user, onLogout }) {
               className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
             />
           </div>
-
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="border rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500"
-          >
-            <option value="All">All</option>
-            <option value="Requested">Requested</option>
-            <option value="Taken">Taken</option>
-            <option value="Not Taken">Not Taken</option>
-          </select>
         </div>
 
         {/* Users Table */}
@@ -140,29 +223,23 @@ export default function ShopkeeperUsers({ user, onLogout }) {
             <thead className="bg-gray-100 text-gray-700">
               <tr>
                 <th className="p-3">Ration ID</th>
-                <th className="p-3">Name</th>
                 <th className="p-3">Phone</th>
                 <th className="p-3">Details</th>
-                <th className="p-3">Status</th>
               </tr>
             </thead>
             <tbody>
               {filteredUsers.map((u) => (
                 <tr key={u.rationId} className="border-t">
                   <td className="p-3">{u.rationId}</td>
-                  <td className="p-3">{u.name}</td>
                   <td className="p-3">{u.phone}</td>
                   <td className="p-3">
                     <button
                       className="flex items-center gap-1 text-green-600 hover:underline"
-                      onClick={() => setModalUser(u)}
+                      onClick={() => fetchCitizenDetails(u.rationId)}
                     >
                       <Eye className="w-4 h-4" />
                       View
                     </button>
-                  </td>
-                  <td className="p-3">
-                    <StatusBadge status={u.status} />
                   </td>
                 </tr>
               ))}
@@ -170,18 +247,67 @@ export default function ShopkeeperUsers({ user, onLogout }) {
           </table>
         </div>
 
-        {/* Modal */}
+        {/* User Details Modal */}
         {modalUser && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-start pt-20 z-50">
             <div className="bg-white rounded-lg shadow w-full max-w-4xl p-6 relative overflow-y-auto max-h-[90vh]">
               <button
-                onClick={() => { setModalUser(null); setRequests([]); setOtp(""); setShowOtpInput(false); }}
+                onClick={() => {
+                  setModalUser(null);
+                  setRequests([]);
+                  setVerifiedRequests([]);
+                  setOtp("");
+                  setShowOtpInput(false);
+                  setFamilyMembers([]);
+                  setEntitlements([]);
+                  setTransactions([]);
+                }}
                 className="absolute top-4 right-4 text-gray-500 hover:text-gray-800"
               >
                 <X className="w-5 h-5" />
               </button>
 
-              <h2 className="text-xl font-bold mb-4">{modalUser.name} Details</h2>
+              <h2 className="text-xl font-bold mb-4">{modalUser.fullName || modalUser.rationId} Details</h2>
+
+              {/* Citizen Info */}
+              <div className="mb-4">
+                <p><strong>Ration ID:</strong> {modalUser.rationId}</p>
+                <p><strong>Phone:</strong> {modalUser.phone}</p>
+                <p><strong>Age:</strong> {modalUser.age}</p>
+                <p><strong>Gender:</strong> {modalUser.gender}</p>
+                <p><strong>Email:</strong> {modalUser.email || "-"}</p>
+                <p><strong>Address:</strong> {modalUser.address || "-"}</p>
+                <p><strong>District:</strong> {modalUser.district || "-"}</p>
+                <p><strong>State:</strong> {modalUser.state || "-"}</p>
+                <p><strong>Assigned Shop:</strong> {modalUser.assignedShop || "-"}</p>
+              </div>
+
+              {/* Family Members */}
+              <h3 className="font-semibold mb-2">Family Members</h3>
+              {familyMembers.length > 0 ? (
+                <table className="w-full text-left mb-4 border">
+                  <thead className="bg-gray-100 text-gray-700">
+                    <tr>
+                      <th className="p-2 border">Name</th>
+                      <th className="p-2 border">Relation</th>
+                      <th className="p-2 border">Age</th>
+                      <th className="p-2 border">Gender</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {familyMembers.map((m, idx) => (
+                      <tr key={idx}>
+                        <td className="p-2 border">{m.memberName}</td>
+                        <td className="p-2 border">{m.relation}</td>
+                        <td className="p-2 border">{m.age}</td>
+                        <td className="p-2 border">{m.gender}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="mb-4">No family members found.</p>
+              )}
 
               {/* Monthly Entitlements */}
               <h3 className="font-semibold mb-2">Monthly Entitlements</h3>
@@ -193,17 +319,25 @@ export default function ShopkeeperUsers({ user, onLogout }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {DUMMY_ENTITLEMENTS.map((e) => (
-                    <tr key={e.itemName}>
-                      <td className="p-2 border">{e.itemName}</td>
-                      <td className="p-2 border">{e.allocatedQty} {e.unit}</td>
+                  {entitlements.length > 0 ? (
+                    entitlements.map((e) => (
+                      <tr key={e.itemName}>
+                        <td className="p-2 border">{e.itemName}</td>
+                        <td className="p-2 border">
+                          {e.perMemberQty * totalMembers} {e.unit ?? ""}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={2} className="p-2 border text-center">No entitlements found</td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
 
               {/* OTP Section */}
-              {requests.length === 0 && !showOtpInput && (
+              {verifiedRequests.length === 0 && !showOtpInput && requests.length > 0 && (
                 <button
                   onClick={handleAcceptRequests}
                   className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 mb-4"
@@ -230,8 +364,8 @@ export default function ShopkeeperUsers({ user, onLogout }) {
                 </div>
               )}
 
-              {/* Requested Items Table */}
-              {requests.length > 0 && (
+              {/* Requested Items (only after OTP) */}
+              {verifiedRequests.length > 0 && (
                 <>
                   <h3 className="font-semibold mb-2">Requested Items</h3>
                   <table className="w-full text-left mb-4 border">
@@ -244,14 +378,12 @@ export default function ShopkeeperUsers({ user, onLogout }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {requests.map((r, idx) => (
-                        <tr key={r.itemName}>
+                      {verifiedRequests.map((r, idx) => (
+                        <tr key={r._id}>
                           <td className="p-2 border">{r.itemName}</td>
                           <td className="p-2 border">{r.requestedQty}</td>
                           <td className="p-2 border text-center">
-                            {r.weight !== null ? (
-                              r.weight
-                            ) : (
+                            {r.weight ?? (
                               <button
                                 onClick={() => fetchWeight(idx)}
                                 className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700"
@@ -277,12 +409,9 @@ export default function ShopkeeperUsers({ user, onLogout }) {
                       ))}
                     </tbody>
                   </table>
-
-                  {/* Submit All */}
                   <button
                     onClick={handleSubmitAll}
-                    disabled={!allVerified}
-                    className={`px-4 py-2 rounded text-white ${allVerified ? "bg-green-600 hover:bg-green-700" : "bg-gray-400 cursor-not-allowed"}`}
+                    className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 mb-4"
                   >
                     Submit All
                   </button>
@@ -300,15 +429,22 @@ export default function ShopkeeperUsers({ user, onLogout }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {DUMMY_TRANSACTIONS.map((t, idx) => (
-                    <tr key={idx}>
-                      <td className="p-2 border">{t.date}</td>
-                      <td className="p-2 border">{t.itemName}</td>
-                      <td className="p-2 border">{t.quantity}</td>
+                  {transactions.length > 0 ? (
+                    transactions.map((t, idx) => (
+                      <tr key={t._id ?? idx}>
+                        <td className="p-2 border">{new Date(t.transactionDate ?? t.date).toLocaleDateString()}</td>
+                        <td className="p-2 border">{t.itemName}</td>
+                        <td className="p-2 border">{t.quantity}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={3} className="p-2 border text-center">No transactions found</td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
+
             </div>
           </div>
         )}
@@ -332,8 +468,8 @@ function StatusBadge({ status }) {
     status === "Requested"
       ? "bg-yellow-100 text-yellow-800"
       : status === "Taken"
-      ? "bg-green-100 text-green-800"
-      : "bg-red-100 text-red-800";
+        ? "bg-green-100 text-green-800"
+        : "bg-red-100 text-red-800";
 
   return (
     <span className={`px-3 py-1 rounded-full text-sm font-medium ${color}`}>

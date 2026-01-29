@@ -118,8 +118,6 @@ export default function ShopkeeperDashboard({ user, onLogout }) {
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium">Item</th>
                   <th className="px-6 py-3 text-left text-xs font-medium">Allocated</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium">Available</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium">Status</th>
                 </tr>
               </thead>
 
@@ -128,16 +126,6 @@ export default function ShopkeeperDashboard({ user, onLogout }) {
                   <tr key={item.stockId}>
                     <td className="px-6 py-4 font-medium">{item.itemName}</td>
                     <td className="px-6 py-4">{item.allocatedQty} kg</td>
-                    <td className="px-6 py-4">{item.availableQty} kg</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        item.availableQty > 50
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}>
-                        {item.availableQty > 50 ? "Good" : "Low"}
-                      </span>
-                    </td>
                   </tr>
                 ))}
               </tbody>
