@@ -21,7 +21,7 @@ router.get("/user/:rationId", async (req, res) => {
           shopNo: 1,
           rationId: 1,
           userName: { $ifNull: ["$userName", "-"] },
-          items: 1, // keep array intact
+          items: 1,
           transactionDate: 1,
           smsStatus: { $ifNull: ["$smsStatus", "-"] },
         },
@@ -45,7 +45,6 @@ router.get("/shop/:shopNo", async (req, res) => {
     const { shopNo } = req.params;
     if (!shopNo) return res.status(400).json({ error: "shopNo is required" });
 
-    // ✅ Same logic as rationId route
     const transactions = await UserTransaction.aggregate([
       { $match: { shopNo } },
       {
@@ -54,7 +53,7 @@ router.get("/shop/:shopNo", async (req, res) => {
           shopNo: 1,
           rationId: 1,
           userName: { $ifNull: ["$userName", "-"] },
-          items: 1, // keep array intact
+          items: 1,
           transactionDate: 1,
           smsStatus: { $ifNull: ["$smsStatus", "-"] },
         },
@@ -66,6 +65,36 @@ router.get("/shop/:shopNo", async (req, res) => {
   } catch (err) {
     console.error("Error fetching transactions by shopNo:", err);
     res.status(500).json({ error: "Server error" });
+  }
+});
+
+/* ---------------------------
+   3️⃣ CREATE TRANSACTION  ✅ (NEW)
+   URL: /api/transactions/create
+---------------------------- */
+router.post("/create", async (req, res) => {
+  try {
+    const { shopNo, rationId, items } = req.body;
+
+    if (!shopNo || !rationId || !items || items.length === 0) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const transaction = new UserTransaction({
+      shopNo,
+      rationId,
+      items,
+    });
+
+    await transaction.save();
+
+    res.status(201).json({
+      message: "Transaction created successfully",
+      transaction,
+    });
+  } catch (err) {
+    console.error("Error creating transaction:", err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
