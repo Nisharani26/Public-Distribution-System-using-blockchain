@@ -53,4 +53,32 @@ router.get("/profile", shopkeeperAuthMiddleware, async (req, res) => {
   }
 });
 
+// GET SHOP DETAILS BY SHOP NUMBER (for Citizen)
+router.get("/shop/:shopNo", async (req, res) => {
+  try {
+    const shopNo = req.params.shopNo;
+
+    // Shop login details
+    const shop = await ShopLogin.findOne({ shopNo }).select("-password");
+    if (!shop) return res.status(404).json({ message: "Shop not found" });
+
+    // Shop profile details
+    const profile = await ShopProfile.findOne({ shopNo });
+
+    res.json({
+      shopNo: shop.shopNo,
+      shopName: shop.shopName,
+      shopOwnerName: shop.shopOwnerName,
+      phone: shop.phone,
+      address: profile?.address || "N/A",
+      district: profile?.district || "N/A",
+      state: profile?.state || "N/A",
+      authorityId: shop.authorityId || null,  // <-- important for complaints
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 module.exports = router;

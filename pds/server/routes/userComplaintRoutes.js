@@ -5,11 +5,33 @@ const UserComplaint = require("../models/userComplaints");
 /* ---------------- ADD COMPLAINT (Citizen) ---------------- */
 router.post("/add", async (req, res) => {
   try {
-    // Make sure authorityId is included in the request body
-    const complaint = await UserComplaint.create(req.body);
+    const {
+      rationId,
+      shopNo,
+      citizenName,
+      phone,
+      description,
+      authorityId,
+    } = req.body;
+
+    // 🔒 basic validation
+    if (!rationId || !shopNo || !description || !authorityId) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const complaint = await UserComplaint.create({
+      rationId,
+      shopNo,
+      citizenName,
+      phone,
+      description,
+      authorityId,
+      status: "Pending",
+    });
+
     res.status(201).json(complaint);
   } catch (err) {
-    console.error(err);
+    console.error("ADD COMPLAINT ERROR:", err);
     res.status(500).json({ message: "Failed to add complaint" });
   }
 });

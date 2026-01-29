@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from "../components/Navbar";
-import { Eye, Clock, CheckCircle, AlertCircle, FileText, Building2 } from 'lucide-react';
+import { Eye, Clock, CheckCircle, AlertCircle, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function AuthorityRequests({ user, onLogout }) {
@@ -8,91 +8,50 @@ export default function AuthorityRequests({ user, onLogout }) {
   const [shops, setShops] = useState([]);
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterShop, setFilterShop] = useState('all');
-  const [loadingShops, setLoadingShops] = useState(true);
-  const [loadingComplaints, setLoadingComplaints] = useState(true);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
 
+  /* ---------------- FETCH SHOPS & COMPLAINTS ---------------- */
+ useEffect(() => {
+  const authorityId = user?.authorityId || localStorage.getItem("authorityId");
+  const token = localStorage.getItem("token");
 
-  /* ---------------- DEBUG: Log user ---------------- */
-  useEffect(() => {
-    console.log("Current user object:", user);
-  }, [user]);
+  if (!authorityId || !token) return;
 
-  /* ---------------- FETCH SHOPS FOR THIS AUTHORITY ---------------- */
-  useEffect(() => {
-    if (!user?.authorityId) return;
-
-    async function fetchShops() {
-      console.log("Fetching shops for authorityId:", user.authorityId);
-      try {
-        const token = localStorage.getItem("token");
-        const res = await fetch(`http://localhost:5000/api/shopkeeper/authority/${user.authorityId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!res.ok) {
-          const text = await res.text();
-          console.error("Failed to fetch shops:", text);
-          toast.error("Failed to fetch shops");
-          setLoadingShops(false);
-          return;
-        }
-
-        const data = await res.json();
-        console.log("Fetched shops:", data);
-        setShops(data);
-      } catch (err) {
-        console.error("Failed to fetch shops:", err);
-        toast.error("Failed to fetch shops");
-      } finally {
-        setLoadingShops(false);
+  const fetchData = async () => {
+    try {
+      // Fetch shops
+      const shopsRes = await fetch(`http://localhost:5000/api/shopkeeper/authority/${authorityId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (shopsRes.ok) {
+        const shopsData = await shopsRes.json();
+        setShops(shopsData);
       }
-    }
 
-    fetchShops();
-  }, [user?.authorityId]);
-
-  /* ---------------- FETCH COMPLAINTS FOR THIS AUTHORITY ---------------- */
-  useEffect(() => {
-    if (!user?.authorityId) return;
-
-    async function fetchComplaints() {
-      console.log("Fetching complaints for authorityId:", user.authorityId);
-      try {
-        const token = localStorage.getItem("token");
-        const res = await fetch(`http://localhost:5000/api/complaints/authority/${user.authorityId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!res.ok) {
-          const text = await res.text();
-          console.error("Fetch complaints failed:", text);
-          toast.error("Failed to fetch complaints");
-          setLoadingComplaints(false);
-          return;
-        }
-
-        const data = await res.json();
-        console.log("Fetched complaints:", data);
-        setComplaints(data);
-      } catch (err) {
-        console.error("Failed to fetch complaints:", err);
-        toast.error("Could not fetch complaints");
-      } finally {
-        setLoadingComplaints(false);
+      // Fetch complaints
+      const complaintsRes = await fetch(`http://localhost:5000/api/complaints/authority/${authorityId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (complaintsRes.ok) {
+        const complaintsData = await complaintsRes.json();
+        setComplaints(complaintsData);
       }
+    } catch (err) {
+      console.error("Failed to fetch data:", err);
+      toast.error("Could not fetch data");
     }
+  };
 
-    fetchComplaints();
-  }, [user?.authorityId]);
+  fetchData();
+}, [user]); // user prop change hone pe fetch kare
+
 
   /* ---------------- FILTERS ---------------- */
   const uniqueShops = shops.map(s => s.shopNo).sort();
 
   const filteredComplaints = complaints.filter(c => {
     const complaintDate = new Date(c.createdAt);
-
     const from = fromDate ? new Date(fromDate) : null;
     const to = toDate ? new Date(toDate) : null;
 
@@ -102,17 +61,6 @@ export default function AuthorityRequests({ user, onLogout }) {
       (!from || complaintDate >= from) &&
       (!to || complaintDate <= to)
     );
-  });
-
-
-  const shopStats = uniqueShops.map(shopNo => {
-    const shopComplaints = complaints.filter(c => c.shopNo === shopNo);
-    return {
-      shopNo,
-      total: shopComplaints.length,
-      pending: shopComplaints.filter(c => c.status === 'Pending').length,
-      resolved: shopComplaints.filter(c => c.status === 'Resolved').length
-    };
   });
 
   /* ---------------- UPDATE STATUS ---------------- */
@@ -128,17 +76,15 @@ export default function AuthorityRequests({ user, onLogout }) {
         body: JSON.stringify({ status }),
       });
 
-      if (!res.ok) {
+      if (res.ok) {
+        const updated = await res.json();
+        setComplaints(prev => prev.map(c => c._id === updated._id ? updated : c));
+        toast.success(`Complaint marked as ${status}`);
+      } else {
         const text = await res.text();
         console.error("Update status failed:", text);
         toast.error("Failed to update status");
-        return;
       }
-
-      const updated = await res.json();
-      console.log("Updated complaint:", updated);
-      setComplaints(prev => prev.map(c => c._id === updated._id ? updated : c));
-      toast.success(`Complaint marked as ${status}`);
     } catch (err) {
       console.error("Failed to update status", err);
       toast.error("Failed to update status");
@@ -146,10 +92,6 @@ export default function AuthorityRequests({ user, onLogout }) {
   };
 
   /* ---------------- RENDER ---------------- */
-  if (!user?.authorityId) {
-    return <p className="text-gray-500 p-6">Loading user information...</p>;
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar userName={user?.name || "Authority"} role="authority" onLogout={onLogout} />
@@ -166,7 +108,7 @@ export default function AuthorityRequests({ user, onLogout }) {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6 flex items-center space-x-4">
             <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center">
               <FileText className="w-6 h-6 text-amber-600" />
@@ -200,18 +142,6 @@ export default function AuthorityRequests({ user, onLogout }) {
               <p className="text-sm text-gray-600">Resolved</p>
             </div>
           </div>
-
-          <div className="bg-white rounded-lg shadow p-6 flex items-center space-x-4">
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <Building2 className="w-6 h-6 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">
-                {shopStats.reduce((max, s) => s.total > max ? s.total : max, 0)}
-              </p>
-              <p className="text-sm text-gray-600">Top Shop Complaints</p>
-            </div>
-          </div>
         </div>
 
         {/* Filters */}
@@ -230,7 +160,7 @@ export default function AuthorityRequests({ user, onLogout }) {
             value={filterShop}
             onChange={e => setFilterShop(e.target.value)}
             className="px-4 py-2 border border-gray-300 rounded-lg"
-            disabled={loadingShops}
+            disabled={shops.length === 0}
           >
             <option value="all">All Shops</option>
             {uniqueShops.map(shopNo => (
@@ -238,13 +168,11 @@ export default function AuthorityRequests({ user, onLogout }) {
             ))}
           </select>
 
-          {/* ✅ ONLY ADDITION — MONTH FILTER */}
           <input
             type="date"
             value={fromDate}
             onChange={e => setFromDate(e.target.value)}
             className="px-4 py-2 border rounded"
-            placeholder="From date"
           />
 
           <input
@@ -252,15 +180,11 @@ export default function AuthorityRequests({ user, onLogout }) {
             value={toDate}
             onChange={e => setToDate(e.target.value)}
             className="px-4 py-2 border rounded"
-            placeholder="To date"
           />
-
         </div>
 
         {/* Complaints List */}
-        {loadingComplaints ? (
-          <p className="text-gray-500">Loading complaints...</p>
-        ) : filteredComplaints.length === 0 ? (
+        {filteredComplaints.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-12 text-center">
             <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600 text-lg font-medium mb-2">No Complaints</p>

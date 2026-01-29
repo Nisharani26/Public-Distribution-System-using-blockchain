@@ -52,6 +52,10 @@ export default function CitizenDashboard({ user, onLogout }) {
         );
 
         const shop = await res.json();
+        if (!res.ok) {
+  console.error("Shop fetch failed", shop.message);
+  return;
+}
         setAuthorityId(shop.authorityId);
       } catch (err) {
         console.error(err);
@@ -111,36 +115,51 @@ export default function CitizenDashboard({ user, onLogout }) {
 
   /* ---------------- SUBMIT COMPLAINT ---------------- */
   const handleSubmitComplaint = async () => {
-    if (!newComplaint.trim() || !authorityId) return;
+  if (!newComplaint.trim()) {
+    alert("Please enter complaint");
+    return;
+  }
 
-    try {
-      const token = localStorage.getItem("token");
+  if (!authorityId) {
+    alert("Authority not loaded yet. Please wait.");
+    return;
+  }
 
-      const res = await fetch("http://localhost:5000/api/complaints/add", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          rationId: user.rationId,
-          shopNo: user.assignedShop,
-          citizenName: user.name,
-          phone: user.phone,
-          description: newComplaint,
-          authorityId,
-        }),
-      });
+  try {
+    const token = localStorage.getItem("token");
 
-      const saved = await res.json();
-      setComplaints([saved, ...complaints]);
-      setNewComplaint("");
-      setShowComplaintModal(false);
-    } catch (err) {
-      console.error(err);
-      alert("Failed to submit complaint");
+    const res = await fetch("http://localhost:5000/api/complaints/add", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        rationId: user.rationId,
+        shopNo: user.assignedShop,
+        citizenName: user.name,
+        phone: user.phone,
+        description: newComplaint,
+        authorityId,
+      }),
+    });
+
+    const saved = await res.json();
+
+    if (!res.ok) {
+      alert(saved.message || "Complaint submit failed");
+      return;
     }
-  };
+
+    setComplaints(prev => [saved, ...prev]);
+    setNewComplaint("");
+    setShowComplaintModal(false);
+
+  } catch (err) {
+    console.error(err);
+    alert("Failed to submit complaint");
+  }
+};
 
   /* ---------------- FETCH ENTITLEMENT FOR REQUEST ---------------- */
   useEffect(() => {

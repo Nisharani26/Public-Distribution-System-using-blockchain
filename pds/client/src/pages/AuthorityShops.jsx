@@ -19,12 +19,10 @@ export default function AuthShopPage({ user, onLogout }) {
   const [totalUsers, setTotalUsers] = useState(0);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-
   const today = new Date();
   const currentMonthKey = `${today.getFullYear()}-${today.getMonth() + 1}`;
   const [selectedMonth, setSelectedMonth] = useState(currentMonthKey);
   const isCurrentMonth = selectedMonth === currentMonthKey;
-
   const [items, setItems] = useState([]);
   const [inputQty, setInputQty] = useState({});
   const [undoStack, setUndoStack] = useState([]);
@@ -40,7 +38,8 @@ export default function AuthShopPage({ user, onLogout }) {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
-        setShops(Array.isArray(data) ? data : []);
+        const shopArray = Array.isArray(data) ? data : [];
+        setShops(shopArray);
       } catch {
         setShops([]);
       } finally {
@@ -67,35 +66,32 @@ export default function AuthShopPage({ user, onLogout }) {
   };
 
   /* ---------------- FETCH SHOP STOCK ---------------- */
- const fetchShopStock = async (shopNo, monthYear = selectedMonth) => {
-  try {
-    const token = localStorage.getItem("token");
-    if (!token) return;
+  const fetchShopStock = async (shopNo, monthYear = selectedMonth) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
 
-    const [year, monthIndex] = monthYear.split("-");
-    const monthName = new Date(year, monthIndex - 1).toLocaleString("default", { month: "long" });
+      const [year, monthIndex] = monthYear.split("-");
+      const monthName = new Date(year, monthIndex - 1).toLocaleString("default", { month: "long" });
 
-    const res = await fetch(`http://localhost:5000/api/shopStock/${shopNo}/${monthName}/${year}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+      const res = await fetch(
+        `http://localhost:5000/api/shopStock/${shopNo}/${monthName}/${year}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const data = await res.json();
+      if (!data?.items) return setItems([]);
 
-    const data = await res.json();
-    if (!data?.items) return setItems([]);
-
-    const formatted = data.items.map((i) => ({
-      itemId: i.stockId || i._id,
-      name: i.itemName || i.name,
-      allocated: i.allocatedQty || 0,
-    }));
-
-    setItems(formatted);
-  } catch (err) {
-    console.error("Stock fetch error", err);
-    setItems([]);
-  }
-};
-
-
+      const formatted = data.items.map((i) => ({
+        itemId: i.stockId || i._id,
+        name: i.itemName || i.name,
+        allocated: i.allocatedQty || 0,
+      }));
+      setItems(formatted);
+    } catch (err) {
+      console.error("Stock fetch error", err);
+      setItems([]);
+    }
+  };
 
   /* ---------------- FETCH SHOP HISTORY ---------------- */
   const fetchShopHistory = async (shopNo) => {
@@ -106,7 +102,6 @@ export default function AuthShopPage({ user, onLogout }) {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const data = await res.json();
-
       const formatted = data.map((t) => ({
         month: new Date(t.transactionDate).toLocaleString("default", {
           month: "short",
@@ -114,7 +109,6 @@ export default function AuthShopPage({ user, onLogout }) {
         }),
         items: t.items.map((i) => ({ name: i.itemName, qty: i.quantity })),
       }));
-
       setHistory(formatted);
     } catch (err) {
       console.error(err);
@@ -145,62 +139,56 @@ export default function AuthShopPage({ user, onLogout }) {
   );
 
   /* ---------------- ALLOCATION ---------------- */
- const confirmAllocation = async (itemId) => {
-  const qty = Number(inputQty[itemId]);
-  if (!qty || qty <= 0) return;
+  const confirmAllocation = async (itemId) => {
+    const qty = Number(inputQty[itemId]);
+    if (!qty || qty <= 0) return;
 
-  // Frontend update for undo stack
-  setUndoStack([...undoStack, items]);
-  const updatedItems = items.map((i) =>
-    i.itemId === itemId ? { ...i, allocated: i.allocated + qty } : i
-  );
-  setItems(updatedItems);
-  setInputQty({ ...inputQty, [itemId]: "" });
+    setUndoStack([...undoStack, items]);
+    const updatedItems = items.map((i) =>
+      i.itemId === itemId ? { ...i, allocated: i.allocated + qty } : i
+    );
+    setItems(updatedItems);
+    setInputQty({ ...inputQty, [itemId]: "" });
 
-  const item = items.find((i) => i.itemId === itemId);
+    const item = items.find((i) => i.itemId === itemId);
+    const payload = {
+      shopNo: selectedShop.shopNo,
+      month: new Date(
+        selectedMonth.split("-")[0],
+        selectedMonth.split("-")[1] - 1
+      ).toLocaleString("default", { month: "long" }),
+      year: parseInt(selectedMonth.split("-")[0]),
+      items: [
+        {
+          stockId: item.itemId,
+          itemName: item.name,
+          quantity: qty,
+        },
+      ],
+      allocatedBy: "authority",
+    };
 
-  // Backend payload
-  const payload = {
-    shopNo: selectedShop.shopNo,
-    month: new Date(selectedMonth.split("-")[0], selectedMonth.split("-")[1] - 1).toLocaleString("default", { month: "long" }),
-    year: parseInt(selectedMonth.split("-")[0]),
-    items: [
-      {
-        stockId: item.itemId,
-        itemName: item.name,
-        quantity: qty,
-      },
-    ],
-    allocatedBy: "authority",
-  };
-
-  try {
-    const token = localStorage.getItem("token");
-
-    // Call shopStock allocate route
-    const res = await fetch("http://localhost:5000/api/shopStock/allocate", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const data = await res.json();
-    if (res.ok) {
-      console.log("Allocation successful", data);
-      // Refetch updated stock and history
-      fetchShopStock(selectedShop.shopNo, selectedMonth);
-      fetchShopHistory(selectedShop.shopNo);
-    } else {
-      console.error("Allocation failed:", data);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("http://localhost:5000/api/shopStock/allocate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        fetchShopStock(selectedShop.shopNo, selectedMonth);
+        fetchShopHistory(selectedShop.shopNo);
+      } else {
+        console.error("Allocation failed:", data);
+      }
+    } catch (err) {
+      console.error("Error saving allocation:", err);
     }
-  } catch (err) {
-    console.error("Error saving allocation:", err);
-  }
-};
-
+  };
 
   const undoAllocation = () => {
     if (undoStack.length === 0) return;
@@ -248,25 +236,17 @@ export default function AuthShopPage({ user, onLogout }) {
               <tr>
                 <th className="p-4 text-left">Shop</th>
                 <th className="p-4 text-left">District</th>
-                <th className="p-4">Stock Status</th>
                 <th className="p-4">Action</th>
               </tr>
             </thead>
             <tbody>
-              {filteredShops.map((shop, index) => (
+              {filteredShops.map((shop) => (
                 <tr key={shop.shopNo} className="border-t hover:bg-gray-50">
                   <td className="p-4 text-left">
                     <p className="font-semibold">{shop.shopName}</p>
                     <p className="text-xs text-gray-500">{shop.shopNo}</p>
                   </td>
                   <td className="p-4 text-left">{shop.district}</td>
-                  <td className="p-4">
-                    {index === 0 ? (
-                      <span className="px-3 py-1 text-xs rounded-full bg-red-100 text-red-700">Low Stock</span>
-                    ) : (
-                      <span className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-700">Sufficient</span>
-                    )}
-                  </td>
                   <td className="p-4">
                     <button onClick={() => openShop(shop)} className="text-blue-600 inline-flex items-center gap-1">
                       <Eye size={16} /> View

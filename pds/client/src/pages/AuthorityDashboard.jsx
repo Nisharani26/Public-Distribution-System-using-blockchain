@@ -181,28 +181,6 @@ export default function AuthorityDashboard() {
 
                 </div>
 
-                {/* Pending Complaints */}
-                <div className="mb-8">
-                    <h2 className="text-xl font-bold text-gray-900 mb-4">Pending Actions Required</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        {pendingActions.map((complaint) => (
-                            <div
-                                key={complaint.id}
-                                className={`p-5 rounded-xl border-l-4 shadow-md flex flex-col justify-center ${
-                                    complaint.status === "pending"
-                                        ? "border-blue-400 bg-blue-50 text-blue-800"
-                                        : complaint.status === "warning"
-                                        ? "border-amber-400 bg-amber-50 text-amber-800"
-                                        : "border-red-400 bg-red-50 text-red-800"
-                                } hover:scale-105 transition-transform duration-300`}
-                            >
-                                <p className="font-semibold text-base sm:text-lg">{complaint.title}</p>
-                                <p className="text-xs text-gray-500 mt-1">Click to view details</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
                 {/* Monthly Distribution Chart */}
                 <div className="bg-white rounded-lg shadow p-6 mb-8">
                     <h2 className="text-xl font-bold text-gray-900 mb-4">Monthly Distribution Trends</h2>
