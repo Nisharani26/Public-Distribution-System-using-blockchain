@@ -60,6 +60,51 @@ export default function ShopkeeperDashboard({ user, onLogout }) {
     fetchDashboardData();
   }, [user]);
 
+  // ✅ Submit stock given to user
+  const handleStockSubmission = async (itemsGiven) => {
+    try {
+      if (!user?.shopNo) return;
+
+      const months = [
+        "January","February","March","April","May","June",
+        "July","August","September","October","November","December"
+      ];
+      const today = new Date();
+      const month = months[today.getMonth()];
+      const year = today.getFullYear();
+
+      // 1️⃣ Update Shop Stock
+      for (const item of itemsGiven) {
+        await axios.put(
+          `http://localhost:5000/api/shopStock/reduceStock/${user.shopNo}/${month}/${year}`,
+          {
+            stockId: item.stockId,
+            quantity: item.quantity
+          }
+        );
+      }
+
+      alert("Stock updated successfully!");
+
+      // 2️⃣ Refresh dashboard stock
+      const stockRes = await axios.get(
+        `http://localhost:5000/api/shopStock/${user.shopNo}/${month}/${year}`
+      );
+
+      const stock = stockRes.data;
+      const totalQty = stock.items.reduce(
+        (sum, item) => sum + item.availableQty,
+        0
+      );
+
+      setStockData(stock.items);
+      setTotalStock(totalQty);
+    } catch (err) {
+      console.error("Error updating stock:", err);
+      alert("Failed to update stock.");
+    }
+  };
+
   if (loading) return <div className="p-8">Loading...</div>;
   if (error) return <div className="p-8 text-red-500">{error}</div>;
 
@@ -118,6 +163,7 @@ export default function ShopkeeperDashboard({ user, onLogout }) {
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium">Item</th>
                   <th className="px-6 py-3 text-left text-xs font-medium">Allocated</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium">Available</th>
                 </tr>
               </thead>
 
@@ -126,13 +172,13 @@ export default function ShopkeeperDashboard({ user, onLogout }) {
                   <tr key={item.stockId}>
                     <td className="px-6 py-4 font-medium">{item.itemName}</td>
                     <td className="px-6 py-4">{item.allocatedQty} kg</td>
+                    <td className="px-6 py-4">{item.availableQty} kg</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </div>
-
       </div>
     </div>
   );

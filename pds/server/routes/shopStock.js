@@ -97,6 +97,30 @@ router.get("/:shopNo/:month/:year", async (req, res) => {
   }
 });
 
+// 🔹 REDUCE STOCK after giving to user
+router.put("/reduceStock/:shopNo/:month/:year", async (req, res) => {
+  try {
+    const { shopNo, month, year } = req.params;
+    const { stockId, quantity } = req.body;
+
+    const stockDoc = await ShopStock.findOne({ shopNo, month, year });
+    if (!stockDoc) return res.status(404).json({ error: "Stock not found" });
+
+    const item = stockDoc.items.find(i => i.stockId === stockId);
+    if (!item) return res.status(404).json({ error: "Item not found" });
+
+    if (item.availableQty < quantity)
+      return res.status(400).json({ error: "Insufficient stock" });
+
+    item.availableQty -= quantity;
+
+    await stockDoc.save();
+    res.json({ message: "Stock reduced successfully", item });
+  } catch (err) {
+    console.error("Error reducing stock:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 
 
 

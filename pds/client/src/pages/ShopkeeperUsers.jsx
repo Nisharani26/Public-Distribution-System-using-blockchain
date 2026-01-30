@@ -11,9 +11,10 @@ export default function ShopkeeperUsers({ user, onLogout }) {
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [otp, setOtp] = useState("");
   const [requests, setRequests] = useState([]);
-  const [verifiedRequests, setVerifiedRequests] = useState([]); // Show after OTP
+  const [verifiedRequests, setVerifiedRequests] = useState([]);
   const [entitlements, setEntitlements] = useState([]);
   const [transactions, setTransactions] = useState([]);
+  const [showModal, setShowModal] = useState(false);
 
   // Fetch all users for this shop
   useEffect(() => {
@@ -22,7 +23,9 @@ export default function ShopkeeperUsers({ user, onLogout }) {
         const shopNo = user?.shopNo;
         if (!shopNo) return;
 
-        const res = await axios.get(`http://localhost:5000/api/shopUsers/${shopNo}/all`);
+        const res = await axios.get(
+          `http://localhost:5000/api/shopUsers/${shopNo}/all`
+        );
         setUsers(res.data);
       } catch (err) {
         console.error("Error fetching users:", err);
@@ -31,30 +34,49 @@ export default function ShopkeeperUsers({ user, onLogout }) {
     fetchUsers();
   }, [user]);
 
-  // Fetch full citizen info (profile + family) when clicking "View"
+  // Fetch full citizen info
   const fetchCitizenDetails = async (rationId) => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/citizen/shopkeeper/profile/${rationId}`);
+      setShowModal(true);
+
+      const res = await axios.get(
+        `http://localhost:5000/api/citizen/shopkeeper/profile/${rationId}`
+      );
       setModalUser(res.data);
       setFamilyMembers(res.data.familyMembers || []);
 
-      const stockRes = await axios.get("http://localhost:5000/api/userStock/template");
+      const stockRes = await axios.get(
+        "http://localhost:5000/api/userStock/template"
+      );
       setEntitlements(stockRes.data);
 
-      const requestsRes = await axios.get(`http://localhost:5000/api/userRequests/myRequests/${rationId}`);
-      setRequests(requestsRes.data.map(r => ({ ...r, weight: null, verified: false })));
-      setVerifiedRequests([]);
+      const requestsRes = await axios.get(
+        `http://localhost:5000/api/userRequests/myRequests/${rationId}`
+      );
 
-      const transactionsRes = await axios.get(`http://localhost:5000/api/transactions/user/${rationId}`);
+      // Add fetchedWeight and verified flags
+      setRequests(
+        requestsRes.data.map((r) => ({
+          ...r,
+          fetchedWeight: undefined,
+          verified: false,
+        }))
+      );
+
+      setVerifiedRequests([]); // reset verified requests
+
+      const transactionsRes = await axios.get(
+        `http://localhost:5000/api/transactions/user/${rationId}`
+      );
       const flatTransactions = [];
-      transactionsRes.data.forEach(t => {
+      transactionsRes.data.forEach((t) => {
         if (t.items && Array.isArray(t.items)) {
-          t.items.forEach(item => {
+          t.items.forEach((item) => {
             flatTransactions.push({
               ...t,
               itemName: item.itemName,
               quantity: item.quantity,
-              transactionDate: t.transactionDate
+              transactionDate: t.transactionDate,
             });
           });
         } else {
@@ -62,32 +84,39 @@ export default function ShopkeeperUsers({ user, onLogout }) {
         }
       });
       setTransactions(flatTransactions);
-
     } catch (err) {
-      console.error("Failed to fetch user details:", err.response ? err.response.data : err.message);
+      console.error(
+        "Failed to fetch user details:",
+        err.response ? err.response.data : err.message
+      );
       alert("Failed to fetch user details.");
     }
   };
 
-  /* Handle accepting requests -> generate OTP via backend */
+  // Accept request -> generate OTP
   const handleAcceptRequests = async () => {
     try {
-      const res = await axios.post(`http://localhost:5000/api/shopUsers/generateOtp/${modalUser.rationId}`);
+      await axios.post(
+        `http://localhost:5000/api/shopUsers/generateOtp/${modalUser.rationId}`
+      );
       setShowOtpInput(true);
-      alert("OTP has been generated. Check server terminal."); // frontend info
+      alert("OTP has been generated. Check server terminal.");
     } catch (err) {
       console.error(err);
       alert("Failed to generate OTP.");
     }
   };
 
-  /* Handle OTP submission -> verify via backend */
+  // OTP verification
   const handleOtpSubmit = async () => {
     if (!otp) return alert("Enter OTP!");
     try {
-      const res = await axios.post(`http://localhost:5000/api/shopUsers/verifyOtp/${modalUser.rationId}`, { otp });
+      const res = await axios.post(
+        `http://localhost:5000/api/shopUsers/verifyOtp/${modalUser.rationId}`,
+        { otp }
+      );
       if (res.data.success) {
-        setVerifiedRequests(requests); // show items
+        setVerifiedRequests(requests); // show all requests after OTP
         setShowOtpInput(false);
         setOtp("");
         alert("OTP verified. Requested items are now visible.");
@@ -100,94 +129,85 @@ export default function ShopkeeperUsers({ user, onLogout }) {
     }
   };
 
- const fetchWeight = async (idx) => {
-  try {
-    const res = await fetch("http://localhost:5001/api/weight");
-    const data = await res.json();
+  // Fetch weight from Raspberry Pi
+  const fetchWeight = async (id) => {
+    try {
+      const res = await fetch("http://192.168.0.102:5001/api/weight");
+      const data = await res.json();
 
-    if (data.message) {
-      alert("Weight data abhi nahi aaya");
-      return;
+      if (!data.ready) return alert("Weight not ready yet.");
+
+      setVerifiedRequests(prev =>
+        prev.map(r =>
+          r._id === id ? { ...r, fetchedWeight: data.weight } : r
+        )
+      );
+
+      alert(`Weight fetched: ${data.weight} ${data.unit}`);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to fetch weight from Raspberry Pi.");
     }
-
-    const updated = [...verifiedRequests];
-    updated[idx].weight = data.weight; // ✅ store in item
-    setVerifiedRequests(updated);
-
-  } catch (err) {
-    console.error("Error fetching weight", err);
-    alert("Failed to fetch weight");
-  }
-};
-
-
-
-
-
-  /* Verify a requested item */
-  const verifyItem = (idx) => {
-    const updated = [...verifiedRequests];
-    updated[idx].verified = true;
-    setVerifiedRequests(updated);
   };
 
-  const allVerified = verifiedRequests.length > 0 && verifiedRequests.every(r => r.verified);
-
-  /* Submit all verified items */
-  const handleSubmitAll = async () => {
-  if (!allVerified) return alert("Verify all items first!");
-
-  try {
-    const items = verifiedRequests.map(r => ({
-      stockId: r.stockId || r._id,
-      itemName: r.itemName,
-      quantity: r.weight, // 🔥 actual measured weight
-    }));
-
-    // 1️⃣ Save transaction
-    await axios.post("http://localhost:5000/api/transactions/create", {
-      shopNo: user.shopNo,
-      rationId: modalUser.rationId,
-      items,
-    });
-
-    // 2️⃣ Update request status
-    await axios.put(
-      `http://localhost:5000/api/userRequests/mark-received/${modalUser.rationId}`
+  const verifyItem = (id) => {
+    setVerifiedRequests(prev =>
+      prev.map(r =>
+        r._id === id ? { ...r, verified: true } : r
+      )
     );
+  };
+  const allVerified =
+    verifiedRequests.length > 0 &&
+    verifiedRequests
+      .filter((r) => r.status === "Pending")
+      .every((r) => r.verified);
 
-    alert("Transaction completed successfully!");
+  // Submit all verified items
+  const handleSubmitAll = async () => {
+    if (!allVerified) return alert("Verify all items first!");
 
-    // RESET UI
-    setModalUser(null);
-    setRequests([]);
-    setVerifiedRequests([]);
-    setFamilyMembers([]);
-    setOtp("");
+    try {
+      const items = verifiedRequests
+        .filter((r) => r.status === "Pending")
+        .map((r) => ({
+          stockId: r.stockId || r._id,
+          itemName: r.itemName,
+          quantity: r.fetchedWeight, // use fetched weight
+        }));
 
-  } catch (err) {
-    console.error(err);
-    alert("Failed to submit transaction");
-  }
-};
+      await axios.post("http://localhost:5000/api/transactions/create", {
+        shopNo: user.shopNo,
+        rationId: modalUser.rationId,
+        items,
+      });
 
+      await axios.put(
+        `http://localhost:5000/api/userRequests/mark-received/${modalUser.rationId}`
+      );
 
-  /* Filter users based on search query */
+      alert("Transaction completed successfully!");
+
+      await fetchCitizenDetails(modalUser.rationId);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to submit transaction");
+    }
+  };
+
   const filteredUsers = users.filter(
     (u) =>
       u.rationId.toLowerCase().includes(search.toLowerCase()) ||
       (u.fullName || "").toLowerCase().includes(search.toLowerCase())
   );
 
-  /* Total family members excluding self */
-  const totalMembers = (familyMembers?.length || 0);
+  const totalMembers = familyMembers?.length || 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar userName={user?.name} role="shopkeeper" onLogout={onLogout} />
 
       <div className="px-6 py-8 max-w-full mx-auto">
-        {/* Header */}
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
             <Users className="w-7 h-7 text-green-600" />
@@ -198,12 +218,10 @@ export default function ShopkeeperUsers({ user, onLogout }) {
           </p>
         </div>
 
-        {/* Total Users */}
         <div className="grid grid-cols-1 sm:grid-cols-1 gap-4 mb-6">
           <StatCard title="Total Users" value={users.length} />
         </div>
 
-        {/* Search Bar */}
         <div className="bg-white p-4 rounded-lg shadow flex flex-col md:flex-row gap-4 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -247,12 +265,13 @@ export default function ShopkeeperUsers({ user, onLogout }) {
           </table>
         </div>
 
-        {/* User Details Modal */}
-        {modalUser && (
+        {/* User Modal */}
+        {showModal && modalUser && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-start pt-20 z-50">
             <div className="bg-white rounded-lg shadow w-full max-w-4xl p-6 relative overflow-y-auto max-h-[90vh]">
               <button
                 onClick={() => {
+                  setShowModal(false);
                   setModalUser(null);
                   setRequests([]);
                   setVerifiedRequests([]);
@@ -267,7 +286,9 @@ export default function ShopkeeperUsers({ user, onLogout }) {
                 <X className="w-5 h-5" />
               </button>
 
-              <h2 className="text-xl font-bold mb-4">{modalUser.fullName || modalUser.rationId} Details</h2>
+              <h2 className="text-xl font-bold mb-4">
+                {modalUser.fullName || modalUser.rationId} Details
+              </h2>
 
               {/* Citizen Info */}
               <div className="mb-4">
@@ -309,7 +330,7 @@ export default function ShopkeeperUsers({ user, onLogout }) {
                 <p className="mb-4">No family members found.</p>
               )}
 
-              {/* Monthly Entitlements */}
+              {/* Entitlements */}
               <h3 className="font-semibold mb-2">Monthly Entitlements</h3>
               <table className="w-full text-left mb-4 border">
                 <thead className="bg-gray-100 text-gray-700">
@@ -364,7 +385,7 @@ export default function ShopkeeperUsers({ user, onLogout }) {
                 </div>
               )}
 
-              {/* Requested Items (only after OTP) */}
+              {/* Requested Items (Only Pending) */}
               {verifiedRequests.length > 0 && (
                 <>
                   <h3 className="font-semibold mb-2">Requested Items</h3>
@@ -378,33 +399,40 @@ export default function ShopkeeperUsers({ user, onLogout }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {verifiedRequests.map((r, idx) => (
-                        <tr key={r._id}>
+                      {verifiedRequests.filter(r => r.status === "Pending").map((r, idx) => (
+                        <tr key={r._id ?? idx}>
                           <td className="p-2 border">{r.itemName}</td>
                           <td className="p-2 border">{r.requestedQty}</td>
                           <td className="p-2 border text-center">
-                            {r.weight ?? (
+                            {r.fetchedWeight === undefined ? (
                               <button
-                                onClick={() => fetchWeight(idx)}
+                                onClick={() => fetchWeight(r._id)}
                                 className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700"
                               >
                                 Fetch
                               </button>
+                            ) : (
+                              r.fetchedWeight
                             )}
                           </td>
+
                           <td className="p-2 border text-center">
                             {r.verified ? (
                               <Check className="w-5 h-5 text-green-600 mx-auto" />
                             ) : (
                               <button
-                                onClick={() => verifyItem(idx)}
-                                disabled={r.weight === null}
-                                className={`px-2 py-1 rounded ${r.weight !== null ? "bg-green-600 text-white hover:bg-green-700" : "bg-gray-400 cursor-not-allowed"}`}
+                                onClick={() => verifyItem(r._id)}
+                                disabled={r.fetchedWeight === undefined}
+                                className={`px-2 py-1 rounded ${r.fetchedWeight !== undefined
+                                  ? "bg-green-600 text-white hover:bg-green-700"
+                                  : "bg-gray-400 cursor-not-allowed"
+                                  }`}
                               >
                                 Verify
                               </button>
                             )}
                           </td>
+
                         </tr>
                       ))}
                     </tbody>
@@ -432,19 +460,22 @@ export default function ShopkeeperUsers({ user, onLogout }) {
                   {transactions.length > 0 ? (
                     transactions.map((t, idx) => (
                       <tr key={t._id ?? idx}>
-                        <td className="p-2 border">{new Date(t.transactionDate ?? t.date).toLocaleDateString()}</td>
+                        <td className="p-2 border">
+                          {new Date(t.transactionDate ?? t.date).toLocaleDateString()}
+                        </td>
                         <td className="p-2 border">{t.itemName}</td>
                         <td className="p-2 border">{t.quantity}</td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={3} className="p-2 border text-center">No transactions found</td>
+                      <td colSpan={3} className="p-2 border text-center">
+                        No transactions found
+                      </td>
                     </tr>
                   )}
                 </tbody>
               </table>
-
             </div>
           </div>
         )}
