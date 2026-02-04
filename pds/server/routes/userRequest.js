@@ -33,9 +33,15 @@ router.get("/myRequests/:rationId", async (req, res) => {
 router.put("/mark-received/:rationId", async (req, res) => {
   try {
     const { rationId } = req.params;
+    const { items } = req.body; // items = array of item names that were actually verified
 
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ message: "No items provided to mark as received" });
+    }
+
+    // Only update requests that match verified items
     await UserRequest.updateMany(
-      { rationId, status: "Pending" },
+      { rationId, itemName: { $in: items }, status: "Pending" },
       { $set: { status: "Received" } }
     );
 
@@ -45,5 +51,6 @@ router.put("/mark-received/:rationId", async (req, res) => {
     res.status(500).json({ message: "Failed to update request status" });
   }
 });
+
 
 module.exports = router;

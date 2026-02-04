@@ -29,7 +29,6 @@ app.use("/api/transactions", require("./routes/userTransaction"));
 // Shopkeeper
 app.use("/api/shopkeeper", require("./routes/shopRoutes"));
 app.use("/api/shopStock", require("./routes/shopStock"));
-app.use("/api/shop-stock", require("./routes/shopStockRoutes"));
 app.use("/api/shopTransaction", require("./routes/shopTransaction"));
 
 // Shop Users (Citizen by Shop)

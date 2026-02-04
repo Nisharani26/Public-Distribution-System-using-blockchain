@@ -85,6 +85,7 @@ export default function AuthShopPage({ user, onLogout }) {
         itemId: i.stockId || i._id,
         name: i.itemName || i.name,
         allocated: i.allocatedQty || 0,
+        available: i.availableQty || 0, // Added available quantity
       }));
       setItems(formatted);
     } catch (err) {
@@ -145,7 +146,7 @@ export default function AuthShopPage({ user, onLogout }) {
 
     setUndoStack([...undoStack, items]);
     const updatedItems = items.map((i) =>
-      i.itemId === itemId ? { ...i, allocated: i.allocated + qty } : i
+      i.itemId === itemId ? { ...i, allocated: i.allocated + qty, available: i.available - qty } : i
     );
     setItems(updatedItems);
     setInputQty({ ...inputQty, [itemId]: "" });
@@ -295,11 +296,12 @@ export default function AuthShopPage({ user, onLogout }) {
                 </b>
                 {!isCurrentMonth && <span className="ml-2 text-red-500">(Read Only)</span>}
               </p>
-              <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="border p-1 rounded">
-                <option value={currentMonthKey}>Current Month</option>
-                <option value="2025-2">Feb 2025</option>
-                <option value="2025-3">Mar 2025</option>
-              </select>
+              <input
+                type="month"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="border p-1 rounded"
+              />
             </div>
 
             {/* ALLOCATION TABLE */}
@@ -309,6 +311,7 @@ export default function AuthShopPage({ user, onLogout }) {
                   <tr>
                     <th className="p-3">Item</th>
                     <th className="p-3">Allocated</th>
+                    <th className="p-3">Available</th>
                     <th className="p-3">Add Qty</th>
                     <th className="p-3">Action</th>
                   </tr>
@@ -316,7 +319,7 @@ export default function AuthShopPage({ user, onLogout }) {
                 <tbody>
                   {items.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="text-center py-4">No stock items found</td>
+                      <td colSpan={5} className="text-center py-4">No data available</td>
                     </tr>
                   )}
                   {items.map((item) => (
@@ -325,17 +328,20 @@ export default function AuthShopPage({ user, onLogout }) {
                         <Package size={16} /> {item.name}
                       </td>
                       <td className="p-3">{item.allocated} kg</td>
+                      <td className="p-3">{item.available} kg</td>
                       <td className="p-3">
                         <input
-                          disabled={!isCurrentMonth}
+                          type="number"
+                          disabled={!isCurrentMonth} // Disabled if not current month
                           value={inputQty[item.itemId] || ""}
                           onChange={(e) => setInputQty({ ...inputQty, [item.itemId]: e.target.value })}
                           className="border p-1 w-20 rounded text-center"
+                          placeholder={isCurrentMonth ? "Enter Qty" : "-"}
                         />
                       </td>
                       <td className="p-3">
                         <button
-                          disabled={!isCurrentMonth}
+                          disabled={!isCurrentMonth} // Disabled if not current month
                           onClick={() => confirmAllocation(item.itemId)}
                           className="bg-blue-600 text-white px-3 py-1 rounded disabled:opacity-50"
                         >
@@ -345,6 +351,7 @@ export default function AuthShopPage({ user, onLogout }) {
                     </tr>
                   ))}
                 </tbody>
+
               </table>
             </div>
 

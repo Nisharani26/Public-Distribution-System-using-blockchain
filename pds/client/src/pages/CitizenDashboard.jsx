@@ -74,7 +74,7 @@ export default function CitizenDashboard({ user, onLogout }) {
         const year = today.getFullYear();
 
         const res = await fetch(
-          `http://localhost:5000/api/shop-stock/${user.assignedShop}/${monthName}/${year}`,
+          `http://localhost:5000/api/shopStock/${user.assignedShop}/${monthName}/${year}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const data = await res.json();

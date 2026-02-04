@@ -15,6 +15,7 @@ export default function ShopkeeperUsers({ user, onLogout }) {
   const [entitlements, setEntitlements] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [showModal, setShowModal] = useState(false);
+  const [shopStock, setShopStock] = useState([]);
 
   // Fetch all users for this shop
   useEffect(() => {
@@ -45,16 +46,15 @@ export default function ShopkeeperUsers({ user, onLogout }) {
       setModalUser(res.data);
       setFamilyMembers(res.data.familyMembers || []);
 
-      const stockRes = await axios.get(
+      const userstockRes = await axios.get(
         "http://localhost:5000/api/userStock/template"
       );
-      setEntitlements(stockRes.data);
+      setEntitlements(userstockRes.data);
 
       const requestsRes = await axios.get(
         `http://localhost:5000/api/userRequests/myRequests/${rationId}`
       );
 
-      // Add fetchedWeight and verified flags
       setRequests(
         requestsRes.data.map((r) => ({
           ...r,
@@ -64,6 +64,13 @@ export default function ShopkeeperUsers({ user, onLogout }) {
       );
 
       setVerifiedRequests([]); // reset verified requests
+      const stockRes = await axios.get(
+        `http://localhost:5000/api/shopStock/${user.shopNo}/${new Date().toLocaleString(
+          "default",
+          { month: "long" }
+        )}/${new Date().getFullYear()}`
+      );
+      setShopStock(stockRes.data.items);
 
       const transactionsRes = await axios.get(
         `http://localhost:5000/api/transactions/user/${rationId}`
@@ -132,13 +139,13 @@ export default function ShopkeeperUsers({ user, onLogout }) {
   // Fetch weight from Raspberry Pi
   const fetchWeight = async (id) => {
     try {
-      const res = await fetch("http://192.168.0.102:5001/api/weight");
+      const res = await fetch("http://192.168.0.105:5001/api/weight");
       const data = await res.json();
 
       if (!data.ready) return alert("Weight not ready yet.");
 
-      setVerifiedRequests(prev =>
-        prev.map(r =>
+      setVerifiedRequests((prev) =>
+        prev.map((r) =>
           r._id === id ? { ...r, fetchedWeight: data.weight } : r
         )
       );
@@ -151,46 +158,112 @@ export default function ShopkeeperUsers({ user, onLogout }) {
   };
 
   const verifyItem = (id) => {
-    setVerifiedRequests(prev =>
-      prev.map(r =>
-        r._id === id ? { ...r, verified: true } : r
+    const item = verifiedRequests.find((r) => r._id === id);
+    if (!item) return;
+
+    const stockItem = shopStock.find(
+      (s) =>
+        s.stockId === item.stockId ||
+        s.itemName.toLowerCase() === (item.itemName || "").toLowerCase()
+    );
+
+    const qtyToVerify = item.fetchedWeight ?? item.requestedQty;
+
+    if (!stockItem || stockItem.availableQty < qtyToVerify) {
+      return alert(
+        `Not enough stock to verify ${item.itemName}. Available: ${stockItem ? stockItem.availableQty : 0
+        }`
+      );
+    }
+
+    setVerifiedRequests((prev) =>
+      prev.map((r) =>
+        r._id === id ? { ...r, verified: true, verifiedQty: qtyToVerify } : r
+      )
+    );
+
+    // Deduct stock locally
+    setShopStock((prev) =>
+      prev.map((s) =>
+        s.stockId === stockItem.stockId
+          ? { ...s, availableQty: s.availableQty - qtyToVerify }
+          : s
       )
     );
   };
-  const allVerified =
-    verifiedRequests.length > 0 &&
-    verifiedRequests
-      .filter((r) => r.status === "Pending")
-      .every((r) => r.verified);
 
-  // Submit all verified items
+  const anyVerified = verifiedRequests.some(
+    (r) => r.status === "Pending" && r.verified
+  );
+
+  const pendingRequests = verifiedRequests.filter((r) => r.status === "Pending");
+
   const handleSubmitAll = async () => {
-    if (!allVerified) return alert("Verify all items first!");
+    const verifiedItems = verifiedRequests.filter(
+      (r) => r.status === "Pending" && r.verified
+    );
+    if (verifiedItems.length === 0)
+      return alert("Verify at least one item first!");
 
     try {
-      const items = verifiedRequests
-        .filter((r) => r.status === "Pending")
-        .map((r) => ({
-          stockId: r.stockId || r._id,
-          itemName: r.itemName,
-          quantity: r.fetchedWeight, // use fetched weight
-        }));
+      const month = new Date().toLocaleString("default", { month: "long" });
+      const year = new Date().getFullYear();
 
+      const successfulItems = [];
+
+      for (const r of verifiedItems) {
+        const stockItem = shopStock.find(
+          (s) =>
+            s.stockId === r.stockId ||
+            s.itemName.toLowerCase() === (r.itemName || "").toLowerCase()
+        );
+
+        if (!stockItem || stockItem.availableQty < r.verifiedQty) {
+          alert(
+            `Cannot submit ${r.itemName}. Not enough stock available: ${stockItem?.availableQty ?? 0}`
+          );
+          continue; // skip this item
+        }
+
+        // Reduce stock in backend
+        await axios.put(
+          `http://localhost:5000/api/shopStock/reduceStock/${user.shopNo}/${month}/${year}`,
+          { stockId: stockItem.stockId, quantity: r.verifiedQty }
+        );
+
+        successfulItems.push({
+          stockId: stockItem.stockId,
+          itemName: r.itemName,
+          quantity: r.verifiedQty,
+        });
+      }
+
+      if (successfulItems.length === 0) {
+        return alert("No items could be submitted due to insufficient stock.");
+      }
+
+      // Create transaction only for successfully submitted items
       await axios.post("http://localhost:5000/api/transactions/create", {
         shopNo: user.shopNo,
         rationId: modalUser.rationId,
-        items,
+        items: successfulItems,
       });
 
+      // Only mark requests as received for successful items
+      // Only mark requests as received for successful items
+      const successfulItemNames = successfulItems.map((i) => i.itemName);
       await axios.put(
-        `http://localhost:5000/api/userRequests/mark-received/${modalUser.rationId}`
+        `http://localhost:5000/api/userRequests/mark-received/${modalUser.rationId}`,
+        { items: successfulItemNames } // modify backend to accept specific items
       );
+
 
       alert("Transaction completed successfully!");
 
+      // Refresh citizen details
       await fetchCitizenDetails(modalUser.rationId);
     } catch (err) {
-      console.error(err);
+      console.error(err.response?.data || err.message);
       alert("Failed to submit transaction");
     }
   };
@@ -292,15 +365,33 @@ export default function ShopkeeperUsers({ user, onLogout }) {
 
               {/* Citizen Info */}
               <div className="mb-4">
-                <p><strong>Ration ID:</strong> {modalUser.rationId}</p>
-                <p><strong>Phone:</strong> {modalUser.phone}</p>
-                <p><strong>Age:</strong> {modalUser.age}</p>
-                <p><strong>Gender:</strong> {modalUser.gender}</p>
-                <p><strong>Email:</strong> {modalUser.email || "-"}</p>
-                <p><strong>Address:</strong> {modalUser.address || "-"}</p>
-                <p><strong>District:</strong> {modalUser.district || "-"}</p>
-                <p><strong>State:</strong> {modalUser.state || "-"}</p>
-                <p><strong>Assigned Shop:</strong> {modalUser.assignedShop || "-"}</p>
+                <p>
+                  <strong>Ration ID:</strong> {modalUser.rationId}
+                </p>
+                <p>
+                  <strong>Phone:</strong> {modalUser.phone}
+                </p>
+                <p>
+                  <strong>Age:</strong> {modalUser.age}
+                </p>
+                <p>
+                  <strong>Gender:</strong> {modalUser.gender}
+                </p>
+                <p>
+                  <strong>Email:</strong> {modalUser.email || "-"}
+                </p>
+                <p>
+                  <strong>Address:</strong> {modalUser.address || "-"}
+                </p>
+                <p>
+                  <strong>District:</strong> {modalUser.district || "-"}
+                </p>
+                <p>
+                  <strong>State:</strong> {modalUser.state || "-"}
+                </p>
+                <p>
+                  <strong>Assigned Shop:</strong> {modalUser.assignedShop || "-"}
+                </p>
               </div>
 
               {/* Family Members */}
@@ -351,21 +442,25 @@ export default function ShopkeeperUsers({ user, onLogout }) {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={2} className="p-2 border text-center">No entitlements found</td>
+                      <td colSpan={2} className="p-2 border text-center">
+                        No entitlements found
+                      </td>
                     </tr>
                   )}
                 </tbody>
               </table>
 
               {/* OTP Section */}
-              {verifiedRequests.length === 0 && !showOtpInput && requests.length > 0 && (
-                <button
-                  onClick={handleAcceptRequests}
-                  className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 mb-4"
-                >
-                  Accept Request
-                </button>
-              )}
+              {verifiedRequests.length === 0 &&
+                !showOtpInput &&
+                requests.length > 0 && (
+                  <button
+                    onClick={handleAcceptRequests}
+                    className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 mb-4"
+                  >
+                    Accept Request
+                  </button>
+                )}
 
               {showOtpInput && (
                 <div className="flex gap-4 mb-4">
@@ -399,47 +494,72 @@ export default function ShopkeeperUsers({ user, onLogout }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {verifiedRequests.filter(r => r.status === "Pending").map((r, idx) => (
-                        <tr key={r._id ?? idx}>
-                          <td className="p-2 border">{r.itemName}</td>
-                          <td className="p-2 border">{r.requestedQty}</td>
-                          <td className="p-2 border text-center">
-                            {r.fetchedWeight === undefined ? (
-                              <button
-                                onClick={() => fetchWeight(r._id)}
-                                className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700"
-                              >
-                                Fetch
-                              </button>
-                            ) : (
-                              r.fetchedWeight
-                            )}
-                          </td>
+                      {verifiedRequests
+                        .filter((r) => r.status === "Pending")
+                        .map((r, idx) => {
+                          const stockItem = shopStock.find(
+                            (s) =>
+                              s.stockId === r.stockId ||
+                              s.itemName.toLowerCase() ===
+                              (r.itemName || "").toLowerCase()
+                          );
+                          const available = stockItem
+                            ? stockItem.availableQty
+                            : 0;
+                          const qtyToVerify = r.fetchedWeight ?? r.requestedQty;
+                          const canVerify =
+                            r.fetchedWeight !== undefined &&
+                            available >= qtyToVerify;
 
-                          <td className="p-2 border text-center">
-                            {r.verified ? (
-                              <Check className="w-5 h-5 text-green-600 mx-auto" />
-                            ) : (
-                              <button
-                                onClick={() => verifyItem(r._id)}
-                                disabled={r.fetchedWeight === undefined}
-                                className={`px-2 py-1 rounded ${r.fetchedWeight !== undefined
-                                  ? "bg-green-600 text-white hover:bg-green-700"
-                                  : "bg-gray-400 cursor-not-allowed"
-                                  }`}
-                              >
-                                Verify
-                              </button>
-                            )}
-                          </td>
-
-                        </tr>
-                      ))}
+                          return (
+                            <tr key={`${r._id}-${idx}`}>
+                              <td className="p-2 border">{r.itemName}</td>
+                              <td className="p-2 border">{r.requestedQty}</td>
+                              <td className="p-2 border text-center">
+                                {r.fetchedWeight === undefined ? (
+                                  <button
+                                    onClick={() => fetchWeight(r._id)}
+                                    disabled={available === 0} // Disable if no stock
+                                    className={`px-2 py-1 rounded ${available === 0
+                                        ? "bg-gray-400 cursor-not-allowed"
+                                        : "bg-blue-600 text-white hover:bg-blue-700"
+                                      }`}
+                                  >
+                                    {available === 0 ? "No Stock" : "Fetch"}
+                                  </button>
+                                ) : (
+                                  r.fetchedWeight
+                                )}
+                              </td>
+                              <td className="p-2 border text-center">
+                                {r.verified ? (
+                                  <Check className="w-5 h-5 text-green-600 mx-auto" />
+                                ) : (
+                                  <button
+                                    onClick={() => verifyItem(r._id)}
+                                    disabled={!canVerify}
+                                    className={`px-3 py-1 rounded ${!canVerify
+                                        ? "bg-red-500 text-white cursor-not-allowed"
+                                        : "bg-green-600 text-white hover:bg-green-700"
+                                      }`}
+                                  >
+                                    Verify
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                     </tbody>
                   </table>
+
                   <button
                     onClick={handleSubmitAll}
-                    className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 mb-4"
+                    disabled={!anyVerified || pendingRequests.length === 0}
+                    className={`px-4 py-2 rounded mb-4 ${!anyVerified || pendingRequests.length === 0
+                        ? "bg-gray-400 cursor-not-allowed"
+                        : "bg-green-600 text-white hover:bg-green-700"
+                      }`}
                   >
                     Submit All
                   </button>
@@ -459,9 +579,11 @@ export default function ShopkeeperUsers({ user, onLogout }) {
                 <tbody>
                   {transactions.length > 0 ? (
                     transactions.map((t, idx) => (
-                      <tr key={t._id ?? idx}>
+                      <tr key={`${t._id}-${idx}`}>
                         <td className="p-2 border">
-                          {new Date(t.transactionDate ?? t.date).toLocaleDateString()}
+                          {new Date(
+                            t.transactionDate ?? t.date
+                          ).toLocaleDateString()}
                         </td>
                         <td className="p-2 border">{t.itemName}</td>
                         <td className="p-2 border">{t.quantity}</td>
@@ -475,7 +597,7 @@ export default function ShopkeeperUsers({ user, onLogout }) {
                     </tr>
                   )}
                 </tbody>
-              </table>
+              </table>1
             </div>
           </div>
         )}

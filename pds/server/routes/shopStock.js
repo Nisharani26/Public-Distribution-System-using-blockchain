@@ -3,7 +3,6 @@ const router = express.Router();
 const ShopStock = require("../models/shopStock");
 const ShopTransaction = require("../models/shopTransaction");
 
-// ✅ ALLOCATE STOCK (AUTHORITY)
 router.post("/allocate", async (req, res) => {
   try {
     const { shopNo, month, year, items, allocatedBy } = req.body;
@@ -12,46 +11,45 @@ router.post("/allocate", async (req, res) => {
       return res.status(400).json({ error: "Invalid data" });
     }
 
-    // 1️⃣ Update shopStock
-    // 1️⃣ Ensure shop stock document exists (UPSERT)
-let stockDoc = await ShopStock.findOne({ shopNo, month, year });
+    let stockDoc = await ShopStock.findOne({ shopNo, month, year });
 
-if (!stockDoc) {
-  stockDoc = await ShopStock.create({
-    shopNo,
-    month,
-    year,
-    items: items.map(i => ({
-      stockId: i.stockId,
-      itemName: i.itemName,
-      allocatedQty: i.quantity,
-      availableQty: i.quantity
-    }))
-  });
-} else {
-  for (const item of items) {
-    const existingItem = stockDoc.items.find(
-      i => i.stockId === item.stockId
-    );
-
-    if (existingItem) {
-      existingItem.allocatedQty += item.quantity;
-      existingItem.availableQty += item.quantity;
-    } else {
-      stockDoc.items.push({
-        stockId: item.stockId,
-        itemName: item.itemName,
-        allocatedQty: item.quantity,
-        availableQty: item.quantity
+    if (!stockDoc) {
+      stockDoc = await ShopStock.create({
+        shopNo,
+        month,
+        year,
+        items: items.map(i => ({
+          stockId: i.stockId,
+          itemName: i.itemName,
+          allocatedQty: i.quantity,
+          availableQty: i.quantity,
+          soldQty: 0,
+        })),
       });
+    } else {
+      for (const item of items) {
+        if (item.quantity <= 0) continue;
+
+        const existingItem = stockDoc.items.find(
+          i => i.stockId === item.stockId
+        );
+
+        if (existingItem) {
+          existingItem.allocatedQty += item.quantity;
+          existingItem.availableQty += item.quantity;
+        } else {
+          stockDoc.items.push({
+            stockId: item.stockId,
+            itemName: item.itemName,
+            allocatedQty: item.quantity,
+            availableQty: item.quantity,
+            soldQty: 0,
+          });
+        }
+      }
+      await stockDoc.save();
     }
-  }
 
-  await stockDoc.save();
-}
-
-
-    // 2️⃣ Save transaction history
     await ShopTransaction.create({
       shopNo,
       items,
@@ -60,13 +58,11 @@ if (!stockDoc) {
 
     res.status(200).json({ message: "Stock allocated successfully" });
   } catch (err) {
-    console.error("Allocation error:", err);
+    console.error(err);
     res.status(500).json({ error: "Server error" });
   }
 });
 
-
-// GET shop stock for a shop/month/year
 router.get("/:shopNo/:month/:year", async (req, res) => {
   try {
     let { shopNo, month, year } = req.params;
@@ -76,7 +72,6 @@ router.get("/:shopNo/:month/:year", async (req, res) => {
       "July","August","September","October","November","December"
     ];
 
-    // Fallback to current month/year if undefined
     if (!month || month === "undefined") {
       month = months[new Date().getMonth()];
     }
@@ -92,16 +87,33 @@ router.get("/:shopNo/:month/:year", async (req, res) => {
 
     res.json(stock);
   } catch (err) {
-    console.error("Fetch shop stock error:", err);
+    console.error(err);
     res.status(500).json({ error: "Server error" });
   }
 });
 
-// 🔹 REDUCE STOCK after giving to user
 router.put("/reduceStock/:shopNo/:month/:year", async (req, res) => {
   try {
-    const { shopNo, month, year } = req.params;
+    let { shopNo, month, year } = req.params;
     const { stockId, quantity } = req.body;
+
+    if (quantity <= 0)
+      return res.status(400).json({ error: "Invalid quantity" });
+
+    const months = [
+      "January","February","March","April","May","June",
+      "July","August","September","October","November","December"
+    ];
+
+    if (!month || month === "undefined") {
+      month = months[new Date().getMonth()];
+    }
+
+    if (!year || year === "undefined") {
+      year = new Date().getFullYear();
+    } else {
+      year = parseInt(year);
+    }
 
     const stockDoc = await ShopStock.findOne({ shopNo, month, year });
     if (!stockDoc) return res.status(404).json({ error: "Stock not found" });
@@ -113,15 +125,14 @@ router.put("/reduceStock/:shopNo/:month/:year", async (req, res) => {
       return res.status(400).json({ error: "Insufficient stock" });
 
     item.availableQty -= quantity;
+    item.soldQty += quantity;
 
     await stockDoc.save();
     res.json({ message: "Stock reduced successfully", item });
   } catch (err) {
-    console.error("Error reducing stock:", err);
+    console.error(err);
     res.status(500).json({ error: "Server error" });
   }
 });
-
-
 
 module.exports = router;
