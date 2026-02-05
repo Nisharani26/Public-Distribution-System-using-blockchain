@@ -2,7 +2,7 @@ const express = require("express");
 const dotenv = require("dotenv");
 const connectDB = require("./config/db");
 const cors = require("cors");
-
+const userTxRoutes = require("./routes/userTransaction.routes");
 dotenv.config();
 connectDB();
 
@@ -33,6 +33,11 @@ app.use("/api/shopTransaction", require("./routes/shopTransaction"));
 
 // Shop Users (Citizen by Shop)
 app.use("/api/shopUsers", require("./routes/shopUserRoute"));
+
+//blockchain
+app.use("/api/user-tx", userTxRoutes);
+
+require("./watchers/userTransaction.watch");
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
