@@ -2,6 +2,10 @@ const express = require("express");
 const router = express.Router();
 const ShopStock = require("../models/shopStock");
 const ShopTransaction = require("../models/shopTransaction");
+const Stock = require("../models/stock");
+const contract = require("../blockchain/contract");
+const web3 = require("../blockchain/web3");
+const hashData = require("../utils/hash");
 
 router.post("/allocate", async (req, res) => {
   try {
@@ -11,6 +15,7 @@ router.post("/allocate", async (req, res) => {
       return res.status(400).json({ error: "Invalid data" });
     }
 
+    // 1️⃣ STOCK UPDATE (same as before)
     let stockDoc = await ShopStock.findOne({ shopNo, month, year });
 
     if (!stockDoc) {
@@ -28,8 +33,6 @@ router.post("/allocate", async (req, res) => {
       });
     } else {
       for (const item of items) {
-        if (item.quantity <= 0) continue;
-
         const existingItem = stockDoc.items.find(
           i => i.stockId === item.stockId
         );
@@ -50,26 +53,46 @@ router.post("/allocate", async (req, res) => {
       await stockDoc.save();
     }
 
-    await ShopTransaction.create({
+    // 2️⃣ TRANSACTION SAVE (MongoDB)
+    const tx = await ShopTransaction.create({
       shopNo,
       items,
       allocatedBy: allocatedBy || "authority",
     });
 
-    res.status(200).json({ message: "Stock allocated successfully" });
+    // 3️⃣ HASH GENERATE
+    const hash = hashData(tx);
+
+    // 4️⃣ BLOCKCHAIN PUSH
+    const accounts = await web3.eth.getAccounts();
+
+    await contract.methods
+      .addTransaction("SHOP", tx._id.toString(), hash)
+      .send({
+        from: accounts[0],
+        gas: 300000,
+      });
+
+    res.status(200).json({
+      message: "Stock allocated, transaction saved & block created",
+      transaction: tx,
+      hash,
+    });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
   }
 });
 
+
 router.get("/:shopNo/:month/:year", async (req, res) => {
   try {
     let { shopNo, month, year } = req.params;
 
     const months = [
-      "January","February","March","April","May","June",
-      "July","August","September","October","November","December"
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
     ];
 
     if (!month || month === "undefined") {
@@ -82,10 +105,22 @@ router.get("/:shopNo/:month/:year", async (req, res) => {
       year = parseInt(year);
     }
 
-    const stock = await ShopStock.findOne({ shopNo, month, year }).lean();
-    if (!stock) return res.status(404).json({ message: "No stock found" });
+    const shopStock = await ShopStock.findOne({ shopNo, month, year }).lean();
+    const masterStock = await Stock.find().lean(); // master stock
 
-    res.json(stock);
+    // Merge: ensure all master items are present
+    const mergedItems = masterStock.map(ms => {
+      const existing = shopStock?.items.find(i => i.stockId === ms.stockId);
+      return {
+        stockId: ms.stockId,
+        itemName: ms.itemName,
+        allocatedQty: existing?.allocatedQty || 0,
+        availableQty: existing?.availableQty || 0,
+      };
+    });
+
+    res.json({ shopNo, month, year, items: mergedItems });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
@@ -101,8 +136,8 @@ router.put("/reduceStock/:shopNo/:month/:year", async (req, res) => {
       return res.status(400).json({ error: "Invalid quantity" });
 
     const months = [
-      "January","February","March","April","May","June",
-      "July","August","September","October","November","December"
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
     ];
 
     if (!month || month === "undefined") {

@@ -5,7 +5,6 @@ import {
   Eye,
   Users,
   X,
-  Undo2,
   Package,
   Store,
   Calendar,
@@ -20,12 +19,14 @@ export default function AuthShopPage({ user, onLogout }) {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const today = new Date();
-  const currentMonthKey = `${today.getFullYear()}-${today.getMonth() + 1}`;
+  const currentMonthKey = `${today.getFullYear()}-${String(
+    today.getMonth() + 1
+  ).padStart(2, "0")}`;
+
   const [selectedMonth, setSelectedMonth] = useState(currentMonthKey);
   const isCurrentMonth = selectedMonth === currentMonthKey;
   const [items, setItems] = useState([]);
   const [inputQty, setInputQty] = useState({});
-  const [undoStack, setUndoStack] = useState([]);
   const [history, setHistory] = useState([]);
 
   /* ---------------- FETCH SHOPS ---------------- */
@@ -79,18 +80,39 @@ export default function AuthShopPage({ user, onLogout }) {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const data = await res.json();
-      if (!data?.items) return setItems([]);
 
-      const formatted = data.items.map((i) => ({
+      // Ensure items array always exists
+      const itemsArray = Array.isArray(data.items) ? data.items : [];
+
+      // Format items for table, default 0 if stock absent
+      const formatted = itemsArray.map((i) => ({
         itemId: i.stockId || i._id,
-        name: i.itemName || i.name,
+        name: i.itemName || i.name || "Unnamed Item",
         allocated: i.allocatedQty || 0,
-        available: i.availableQty || 0, // Added available quantity
+        available: i.availableQty || 0,
       }));
+
+      // If no items, add a dummy row to show table structure
+      if (formatted.length === 0) {
+        formatted.push({
+          itemId: "dummy1",
+          name: "No items allocated",
+          allocated: 0,
+          available: 0,
+        });
+      }
+
       setItems(formatted);
     } catch (err) {
       console.error("Stock fetch error", err);
-      setItems([]);
+      setItems([
+        {
+          itemId: "dummy1",
+          name: "No items allocated",
+          allocated: 0,
+          available: 0,
+        },
+      ]);
     }
   };
 
@@ -144,7 +166,6 @@ export default function AuthShopPage({ user, onLogout }) {
     const qty = Number(inputQty[itemId]);
     if (!qty || qty <= 0) return;
 
-    setUndoStack([...undoStack, items]);
     const updatedItems = items.map((i) =>
       i.itemId === itemId ? { ...i, allocated: i.allocated + qty, available: i.available - qty } : i
     );
@@ -179,6 +200,7 @@ export default function AuthShopPage({ user, onLogout }) {
         },
         body: JSON.stringify(payload),
       });
+
       const data = await res.json();
       if (res.ok) {
         fetchShopStock(selectedShop.shopNo, selectedMonth);
@@ -189,13 +211,6 @@ export default function AuthShopPage({ user, onLogout }) {
     } catch (err) {
       console.error("Error saving allocation:", err);
     }
-  };
-
-  const undoAllocation = () => {
-    if (undoStack.length === 0) return;
-    const prev = undoStack[undoStack.length - 1];
-    setItems(prev);
-    setUndoStack(undoStack.slice(0, -1));
   };
 
   if (loading) {
@@ -317,11 +332,6 @@ export default function AuthShopPage({ user, onLogout }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {items.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="text-center py-4">No data available</td>
-                    </tr>
-                  )}
                   {items.map((item) => (
                     <tr key={item.itemId} className="border-t">
                       <td className="p-3 flex justify-center gap-2 items-center">
@@ -332,7 +342,7 @@ export default function AuthShopPage({ user, onLogout }) {
                       <td className="p-3">
                         <input
                           type="number"
-                          disabled={!isCurrentMonth} // Disabled if not current month
+                          disabled={!isCurrentMonth} 
                           value={inputQty[item.itemId] || ""}
                           onChange={(e) => setInputQty({ ...inputQty, [item.itemId]: e.target.value })}
                           className="border p-1 w-20 rounded text-center"
@@ -341,7 +351,7 @@ export default function AuthShopPage({ user, onLogout }) {
                       </td>
                       <td className="p-3">
                         <button
-                          disabled={!isCurrentMonth} // Disabled if not current month
+                          disabled={!isCurrentMonth} 
                           onClick={() => confirmAllocation(item.itemId)}
                           className="bg-blue-600 text-white px-3 py-1 rounded disabled:opacity-50"
                         >
@@ -351,14 +361,8 @@ export default function AuthShopPage({ user, onLogout }) {
                     </tr>
                   ))}
                 </tbody>
-
               </table>
             </div>
-
-            {/* UNDO */}
-            <button onClick={undoAllocation} className="flex items-center gap-2 text-orange-600 mb-6">
-              <Undo2 size={16} /> Undo Last Allocation
-            </button>
 
             {/* HISTORY */}
             <div className="flex items-center gap-4 mb-4">
