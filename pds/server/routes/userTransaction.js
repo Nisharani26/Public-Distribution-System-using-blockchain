@@ -2,6 +2,9 @@
 const express = require("express");
 const router = express.Router();
 const UserTransaction = require("../models/UserTransaction");
+const contract = require("../blockchain/contract");
+const web3 = require("../blockchain/web3");
+const hashData = require("../utils/hash");
 
 /* ---------------------------
    1️⃣ Get transactions by rationId
@@ -80,6 +83,7 @@ router.post("/create", async (req, res) => {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
+    // 1. MongoDB save
     const transaction = new UserTransaction({
       shopNo,
       rationId,
@@ -88,8 +92,21 @@ router.post("/create", async (req, res) => {
 
     await transaction.save();
 
+    // 2. Hash generate
+    const hash = hashData(transaction);
+
+    // 3. Blockchain push
+    const accounts = await web3.eth.getAccounts();
+
+    await contract.methods
+      .addTransaction("USER", transaction._id.toString(), hash)
+      .send({
+        from: accounts[0],
+        gas: 300000,
+      });
+
     res.status(201).json({
-      message: "Transaction created successfully",
+      message: "User transaction stored & block created",
       transaction,
     });
   } catch (err) {
@@ -97,5 +114,6 @@ router.post("/create", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
 
 module.exports = router;

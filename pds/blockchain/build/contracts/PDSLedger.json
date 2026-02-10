@@ -9411,12 +9411,12 @@
     "5777": {
       "events": {},
       "links": {},
-      "address": "0x060e143e6b6b9D56d0993d7a2c7Bf9A954b23E82",
-      "transactionHash": "0xcae43fe9e4909d313b8c1cf52693aba3c4132269edfee46234b2ae7219011c1e"
+      "address": "0x7ec9db6CEF3fE627Fd98Ad16fc5a00B7A58E065F",
+      "transactionHash": "0x098ebec4a1c15e90f6f2ac6b40527d6122d28602167ee0a2cf90631007bb6d4a"
     }
   },
   "schemaVersion": "3.4.16",
-  "updatedAt": "2026-02-05T17:50:48.631Z",
+  "updatedAt": "2026-02-10T18:18:54.298Z",
   "networkType": "ethereum",
   "devdoc": {
     "kind": "dev",
