@@ -139,7 +139,7 @@ export default function ShopkeeperUsers({ user, onLogout }) {
   // Fetch weight from Raspberry Pi
   const fetchWeight = async (id) => {
     try {
-      const res = await fetch("http://192.168.0.103:5001/api/weight");
+      const res = await fetch("http://10.123.81.162:5001/api/weight");
       const data = await res.json();
 
       if (!data.ready) return alert("Weight not ready yet.");

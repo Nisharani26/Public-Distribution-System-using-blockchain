@@ -10,8 +10,24 @@ const hashData = require("../utils/hash");
 // -------------------------
 // Transaction Type Constants
 // -------------------------
-const TX_TYPE_USER = 0;
-const TX_TYPE_SHOP = 1;
+const TX_TYPE_USER = "0";
+const TX_TYPE_SHOP = "1";
+
+// -------------------------
+// Deterministic Hash Payload
+// -------------------------
+function createHashPayload(tx) {
+  return {
+    shopNo: tx.shopNo,
+    items: tx.items.map(item => ({
+      stockId: item.stockId,
+      itemName: item.itemName,
+      quantity: item.quantity
+    })),
+    allocatedBy: tx.allocatedBy,
+    transactionDate: tx.transactionDate
+  };
+}
 
 // -------------------------
 // Allocate Stock to Shop
@@ -43,6 +59,7 @@ router.post("/allocate", async (req, res) => {
     } else {
       for (const item of items) {
         const existingItem = stockDoc.items.find(i => i.stockId === item.stockId);
+
         if (existingItem) {
           existingItem.allocatedQty += item.quantity;
           existingItem.availableQty += item.quantity;
@@ -59,41 +76,43 @@ router.post("/allocate", async (req, res) => {
       await stockDoc.save();
     }
 
-    // 2️⃣ TRANSACTION SAVE (MongoDB)
+    // 2️⃣ SAVE TRANSACTION (MongoDB)
     const tx = await ShopTransaction.create({
       shopNo,
       items,
       allocatedBy: allocatedBy || "authority",
+      transactionDate: new Date()
     });
 
-    // Debug logs
-    console.log("Allocating stock for shop:", shopNo);
-    console.log("Mongo TX ID being sent to blockchain:", tx._id.toString());
+    console.log("Mongo TX ID:", tx._id.toString());
 
-    // 3️⃣ HASH GENERATE
-    const hash = hashData(tx);
+    // 3️⃣ CREATE DETERMINISTIC HASH
+    const hashPayload = createHashPayload(tx);
+    const hash = hashData(hashPayload);
 
-    // 4️⃣ BLOCKCHAIN PUSH
+    // 4️⃣ PUSH TO BLOCKCHAIN
     const accounts = await web3.eth.getAccounts();
-    console.log("Using account:", accounts[0]);
 
     const receipt = await contract.methods
-      .addTransaction(TX_TYPE_SHOP.toString(), tx._id.toString(), hash)
+      .addTransaction(TX_TYPE_SHOP, tx._id.toString(), hash)
       .send({ from: accounts[0], gas: 500000 });
 
-    console.log("Blockchain addTransaction receipt:", receipt);
+    const safeReceipt = JSON.parse(
+      JSON.stringify(receipt, (key, value) =>
+        typeof value === "bigint" ? value.toString() : value
+      )
+    );
 
     res.status(200).json({
       message: "Stock allocated, transaction saved & block created",
       transaction: tx,
       hash,
-      blockchainReceipt: JSON.parse(JSON.stringify(receipt, (key, value) =>
-        typeof value === 'bigint' ? value.toString() : value
-      )),
+      receipt: safeReceipt
     });
 
+
   } catch (err) {
-    console.error("Error allocating stock:", err);
+    console.error("Allocation Error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
@@ -104,6 +123,7 @@ router.post("/allocate", async (req, res) => {
 router.get("/:shopNo/:month/:year", async (req, res) => {
   try {
     let { shopNo, month, year } = req.params;
+
     const months = [
       "January", "February", "March", "April", "May", "June",
       "July", "August", "September", "October", "November", "December"
@@ -148,6 +168,7 @@ router.put("/reduceStock/:shopNo/:month/:year", async (req, res) => {
       "January", "February", "March", "April", "May", "June",
       "July", "August", "September", "October", "November", "December"
     ];
+
     if (!month || month === "undefined") month = months[new Date().getMonth()];
     if (!year || year === "undefined") year = new Date().getFullYear();
     else year = parseInt(year);
@@ -172,53 +193,62 @@ router.put("/reduceStock/:shopNo/:month/:year", async (req, res) => {
 });
 
 // -------------------------
-// Fetch Blockchain Transactions for Shop (Fixed)
+// Fetch Blockchain Transactions for Shop
 // -------------------------
 router.get("/transactions/:shopNo", async (req, res) => {
   try {
     const { shopNo } = req.params;
 
-    const txCount = await contract.methods.getTransactionCount(TX_TYPE_SHOP).call();
-    console.log("Total blockchain SHOP transactions:", txCount);
+    const txCount = await contract.methods.getTransactionCount().call();
+    console.log("Total blockchain transactions:", txCount);
 
     let transactions = [];
     let seenMongoIds = new Set();
 
-    for (let i = 0; i < txCount; i++) {
-      const tx = await contract.methods.getTransaction(TX_TYPE_SHOP, i).call();
-      console.log(`Blockchain TX ${i}:`, tx);
+    for (let i = 0; i < Number(txCount); i++) {
 
-      // Avoid duplicates
-      if (seenMongoIds.has(tx.mongoId)) {
-        console.log(`Skipping duplicate MongoID ${tx.mongoId}`);
-        continue;
-      }
+      const tx = await contract.methods.getTransaction(i).call();
+
+      // Only shop transactions
+      if (tx.txType !== TX_TYPE_SHOP) continue;
+
+      if (seenMongoIds.has(tx.mongoId)) continue;
 
       const dbTx = await ShopTransaction.findById(tx.mongoId).lean();
 
-      if (dbTx && dbTx.shopNo === shopNo) {
-        const recomputedHash = hashData(dbTx);
+      if (!dbTx) {
         transactions.push({
           transactionId: tx.mongoId,
-          shopNo: dbTx.shopNo,
-          items: dbTx.items,
-          transactionDate: dbTx.createdAt,
-          blockchainHash: tx.dataHash,
-          currentHash: recomputedHash,
-          tampered: recomputedHash !== tx.dataHash,
-        });
-      } else if (!dbTx) {
-        transactions.push({
-          transactionId: tx.mongoId,
-          shopNo: shopNo,
+          shopNo,
           items: [],
           transactionDate: null,
           blockchainHash: tx.dataHash,
           currentHash: null,
           tampered: true,
-          note: "DB record missing",
+          note: "DB record missing"
         });
+
+        seenMongoIds.add(tx.mongoId);
+        continue;
       }
+
+      if (dbTx.shopNo !== shopNo) {
+        seenMongoIds.add(tx.mongoId);
+        continue;
+      }
+
+      const hashPayload = createHashPayload(dbTx);
+      const recomputedHash = hashData(hashPayload);
+
+      transactions.push({
+        transactionId: tx.mongoId,
+        shopNo: dbTx.shopNo,
+        items: dbTx.items,
+        transactionDate: dbTx.transactionDate,
+        blockchainHash: tx.dataHash,
+        currentHash: recomputedHash,
+        tampered: recomputedHash !== tx.dataHash
+      });
 
       seenMongoIds.add(tx.mongoId);
     }
@@ -226,7 +256,7 @@ router.get("/transactions/:shopNo", async (req, res) => {
     res.json(transactions);
 
   } catch (err) {
-    console.error("Error fetching blockchain transactions:", err);
+    console.error("Fetch Blockchain Error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
