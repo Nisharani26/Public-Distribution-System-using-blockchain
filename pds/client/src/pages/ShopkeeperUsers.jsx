@@ -135,27 +135,46 @@ export default function ShopkeeperUsers({ user, onLogout }) {
       alert("OTP verification failed.");
     }
   };
-
-  // Fetch weight from Raspberry Pi
+  //Fetch weight
   const fetchWeight = async (id) => {
     try {
       const res = await fetch("http://10.123.81.162:5001/api/weight");
+
+      if (!res.ok) {
+        alert("Failed to connect to weight device.");
+        return;
+      }
+
       const data = await res.json();
+      console.log("Weight API Response:", data);
 
-      if (!data.ready) return alert("Weight not ready yet.");
+      const weightValue = data.weight ?? data.currentWeight ?? null;
 
+      if (!weightValue || weightValue <= 0) {
+        alert("Weight not ready yet.");
+        return;
+      }
+
+      // ✅ Store internally but DO NOT display
       setVerifiedRequests((prev) =>
         prev.map((r) =>
-          r._id === id ? { ...r, fetchedWeight: data.weight } : r
+          r._id === id
+            ? { ...r, machineWeight: Number(weightValue) }
+            : r
         )
       );
 
-      alert(`Weight fetched: ${data.weight} ${data.unit}`);
+      alert(`Fetched Weight: ${weightValue} g`);
+
     } catch (err) {
       console.error(err);
       alert("Failed to fetch weight from Raspberry Pi.");
     }
   };
+
+
+
+
 
   const verifyItem = (id) => {
     const item = verifiedRequests.find((r) => r._id === id);
@@ -167,22 +186,22 @@ export default function ShopkeeperUsers({ user, onLogout }) {
         s.itemName.toLowerCase() === (item.itemName || "").toLowerCase()
     );
 
-    const qtyToVerify = item.fetchedWeight ?? item.requestedQty;
+    const qtyToVerify = item.requestedQty; // ✅ Always requestedQty
 
     if (!stockItem || stockItem.availableQty < qtyToVerify) {
       return alert(
-        `Not enough stock to verify ${item.itemName}. Available: ${stockItem ? stockItem.availableQty : 0
-        }`
+        `Not enough stock. Available: ${stockItem ? stockItem.availableQty : 0}`
       );
     }
 
+    // ✅ Mark item as verified
     setVerifiedRequests((prev) =>
       prev.map((r) =>
-        r._id === id ? { ...r, verified: true, verifiedQty: qtyToVerify } : r
+        r._id === id ? { ...r, verified: true } : r
       )
     );
 
-    // Deduct stock locally
+    // ✅ Subtract stock based on requestedQty only
     setShopStock((prev) =>
       prev.map((s) =>
         s.stockId === stockItem.stockId
@@ -191,6 +210,9 @@ export default function ShopkeeperUsers({ user, onLogout }) {
       )
     );
   };
+
+
+
 
   const anyVerified = verifiedRequests.some(
     (r) => r.status === "Pending" && r.verified
@@ -218,23 +240,25 @@ export default function ShopkeeperUsers({ user, onLogout }) {
             s.itemName.toLowerCase() === (r.itemName || "").toLowerCase()
         );
 
-        if (!stockItem || stockItem.availableQty < r.verifiedQty) {
+        const qtyToSubmit = r.requestedQty; // Always requestedQty
+
+        if (!stockItem || stockItem.availableQty < qtyToSubmit) {
           alert(
             `Cannot submit ${r.itemName}. Not enough stock available: ${stockItem?.availableQty ?? 0}`
           );
-          continue; // skip this item
+          continue;
         }
 
         // Reduce stock in backend
         await axios.put(
           `http://localhost:5000/api/shopStock/reduceStock/${user.shopNo}/${month}/${year}`,
-          { stockId: stockItem.stockId, quantity: r.verifiedQty }
+          { stockId: stockItem.stockId, quantity: qtyToSubmit }
         );
 
         successfulItems.push({
           stockId: stockItem.stockId,
           itemName: r.itemName,
-          quantity: r.verifiedQty,
+          quantity: qtyToSubmit,
         });
       }
 
@@ -242,31 +266,27 @@ export default function ShopkeeperUsers({ user, onLogout }) {
         return alert("No items could be submitted due to insufficient stock.");
       }
 
-      // Create transaction only for successfully submitted items
+      // Create transaction
       await axios.post("http://localhost:5000/api/transactions/create", {
         shopNo: user.shopNo,
         rationId: modalUser.rationId,
         items: successfulItems,
       });
 
-      // Only mark requests as received for successful items
-      // Only mark requests as received for successful items
       const successfulItemNames = successfulItems.map((i) => i.itemName);
       await axios.put(
         `http://localhost:5000/api/userRequests/mark-received/${modalUser.rationId}`,
-        { items: successfulItemNames } // modify backend to accept specific items
+        { items: successfulItemNames }
       );
 
-
       alert("Transaction completed successfully!");
-
-      // Refresh citizen details
       await fetchCitizenDetails(modalUser.rationId);
     } catch (err) {
       console.error(err.response?.data || err.message);
       alert("Failed to submit transaction");
     }
   };
+
 
   const filteredUsers = users.filter(
     (u) =>
@@ -503,34 +523,54 @@ export default function ShopkeeperUsers({ user, onLogout }) {
                               s.itemName.toLowerCase() ===
                               (r.itemName || "").toLowerCase()
                           );
+
                           const available = stockItem
                             ? stockItem.availableQty
                             : 0;
-                          const qtyToVerify = r.fetchedWeight ?? r.requestedQty;
-                          const canVerify =
-                            r.fetchedWeight !== undefined &&
-                            available >= qtyToVerify;
+
+                          // Fetch must happen first
+                          const hasFetched = r.machineWeight !== undefined && r.machineWeight !== null;
+
+                          // Quantity to verify
+                          const qtyToVerify = r.machineWeight ?? r.requestedQty; // fallback to requestedQty
+                          const canVerify = r.requestedQty > 0 && available >= r.requestedQty;
+
+
+
+
 
                           return (
                             <tr key={`${r._id}-${idx}`}>
+                              {/* Item */}
                               <td className="p-2 border">{r.itemName}</td>
-                              <td className="p-2 border">{r.requestedQty}</td>
+
+                              {/* Requested Qty (UNCHANGED) */}
+                              <td className="p-2 border">
+                                {r.requestedQty}
+                              </td>
+
+                              {/* Fetch Weight Column */}
                               <td className="p-2 border text-center">
-                                {r.fetchedWeight === undefined ? (
+                                {r.machineWeight !== undefined && r.machineWeight !== null ? (
+                                  <span className="text-black font-medium">
+                                    {r.requestedQty}g
+                                  </span>
+                                ) : (
                                   <button
                                     onClick={() => fetchWeight(r._id)}
-                                    disabled={available === 0} // Disable if no stock
+                                    disabled={available === 0}
                                     className={`px-2 py-1 rounded ${available === 0
-                                        ? "bg-gray-400 cursor-not-allowed"
-                                        : "bg-blue-600 text-white hover:bg-blue-700"
+                                      ? "bg-gray-400 cursor-not-allowed"
+                                      : "bg-blue-600 text-white hover:bg-blue-700"
                                       }`}
                                   >
                                     {available === 0 ? "No Stock" : "Fetch"}
                                   </button>
-                                ) : (
-                                  r.fetchedWeight
                                 )}
                               </td>
+
+
+                              {/* Verify */}
                               <td className="p-2 border text-center">
                                 {r.verified ? (
                                   <Check className="w-5 h-5 text-green-600 mx-auto" />
@@ -539,26 +579,29 @@ export default function ShopkeeperUsers({ user, onLogout }) {
                                     onClick={() => verifyItem(r._id)}
                                     disabled={!canVerify}
                                     className={`px-3 py-1 rounded ${!canVerify
-                                        ? "bg-red-500 text-white cursor-not-allowed"
-                                        : "bg-green-600 text-white hover:bg-green-700"
+                                      ? "bg-gray-400 text-white cursor-not-allowed opacity-70"
+                                      : "bg-green-600 text-white hover:bg-green-700"
                                       }`}
                                   >
                                     Verify
                                   </button>
+
+
                                 )}
                               </td>
                             </tr>
                           );
                         })}
                     </tbody>
+
                   </table>
 
                   <button
                     onClick={handleSubmitAll}
                     disabled={!anyVerified || pendingRequests.length === 0}
                     className={`px-4 py-2 rounded mb-4 ${!anyVerified || pendingRequests.length === 0
-                        ? "bg-gray-400 cursor-not-allowed"
-                        : "bg-green-600 text-white hover:bg-green-700"
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-green-600 text-white hover:bg-green-700"
                       }`}
                   >
                     Submit All
@@ -597,7 +640,7 @@ export default function ShopkeeperUsers({ user, onLogout }) {
                     </tr>
                   )}
                 </tbody>
-              </table>1
+              </table>
             </div>
           </div>
         )}
