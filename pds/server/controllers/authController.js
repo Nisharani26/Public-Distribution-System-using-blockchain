@@ -166,7 +166,7 @@ exports.sendAuthorityOTP = async (req, res) => {
     console.log("Mobile number:", login.mobile);
     // ✅ Send OTP via Twilio SMS instead of console
     await twilioClient.messages.create({
-      body: `Your OTP is ${otp}`,
+      body: `PDS System Your OTP is ${otp}. Enter this code to verify your login. Do not share this code with anyone.`,
       from: process.env.TWILIO_PHONE_NUMBER, // your Twilio number
       to: '+91' + login.mobile, // ensure mobile has country code, e.g. +91XXXXXXXXXX
     });

@@ -149,11 +149,8 @@ export default function AuthShopPage({ user, onLogout }) {
 
   /* ---------------- REFETCH STOCK ON MONTH CHANGE ---------------- */
   useEffect(() => {
-    if (selectedShop) {
-      fetchShopStock(selectedShop.shopNo, selectedMonth);
-    }
-  }, [selectedMonth]);
-
+  fetchShopStock(selectedShop);
+}, [fetchShopStock, selectedShop]);
   /* ---------------- FILTERED SHOPS ---------------- */
   const filteredShops = shops.filter(
     (s) =>
