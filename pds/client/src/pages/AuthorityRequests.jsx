@@ -21,7 +21,7 @@ export default function AuthorityRequests({ user, onLogout }) {
   const fetchData = async () => {
     try {
       // Fetch shops
-      const shopsRes = await fetch(`http://localhost:5000/api/shopkeeper/authority/${authorityId}`, {
+      const shopsRes = await fetch(`https://public-distribution-system-using.onrender.com/api/shopkeeper/authority/${authorityId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (shopsRes.ok) {
@@ -30,7 +30,7 @@ export default function AuthorityRequests({ user, onLogout }) {
       }
 
       // Fetch complaints
-      const complaintsRes = await fetch(`http://localhost:5000/api/complaints/authority/${authorityId}`, {
+      const complaintsRes = await fetch(`https://public-distribution-system-using.onrender.com/api/complaints/authority/${authorityId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (complaintsRes.ok) {
@@ -67,7 +67,7 @@ export default function AuthorityRequests({ user, onLogout }) {
   const handleUpdateStatus = async (_id, status) => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:5000/api/complaints/${_id}/status`, {
+      const res = await fetch(`https://public-distribution-system-using.onrender.com/api/complaints/${_id}/status`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

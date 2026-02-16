@@ -15,7 +15,7 @@ export default function CitizenTransactionHistory({ user, onLogout }) {
       try {
         const token = localStorage.getItem("token");
         const res = await fetch(
-          `http://localhost:5000/api/transactions/user/${user.rationId}`,
+          `https://public-distribution-system-using.onrender.com/api/transactions/user/${user.rationId}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }

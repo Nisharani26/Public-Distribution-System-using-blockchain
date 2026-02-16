@@ -20,7 +20,7 @@ export default function AuthorityUsers({ user, onLogout }) {
       try {
         const token = localStorage.getItem("token");
         const res = await fetch(
-          "http://localhost:5000/api/auth/authUsers/all",
+          "https://public-distribution-system-using.onrender.com/api/auth/authUsers/all",
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const data = await res.json();
@@ -63,7 +63,7 @@ export default function AuthorityUsers({ user, onLogout }) {
 
       // Fetch allocated items from shopStock template
       const resStock = await fetch(
-        `http://localhost:5000/api/userStock/template`,
+        `https://public-distribution-system-using.onrender.com/api/userStock/template`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const stockTemplate = await resStock.json();
@@ -85,7 +85,7 @@ export default function AuthorityUsers({ user, onLogout }) {
 
       // Fetch transactions for the user
       const resTransactions = await fetch(
-        `http://localhost:5000/api/transactions/user/${user.rationId}`,
+        `https://public-distribution-system-using.onrender.com/api/transactions/user/${user.rationId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const dataTransactions = await resTransactions.json();
