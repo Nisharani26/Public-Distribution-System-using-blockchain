@@ -66,17 +66,30 @@ router.post("/generateOtp/:rationId", async (req, res) => {
       });
     }
 
-    // generate OTP
+    // ✅ check mobile exists
+    if (!user.mobile) {
+      console.error("Mobile number missing for rationId:", rationId);
+      return res.status(400).json({
+        success: false,
+        message: "Mobile number not found",
+      });
+    }
+
+    // ✅ generate OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // store OTP with expiry
+    // ✅ store OTP
     otpStore.set(rationId, {
       otp,
       expiresAt: Date.now() + 5 * 60 * 1000,
     });
 
     // ✅ format mobile number to +91XXXXXXXXXX
-    let mobileNumber = user.mobile.toString().replace(/\D/g, "");
+    let mobileNumber = String(user.mobile).replace(/\D/g, "");
+
+    if (mobileNumber.startsWith("0")) {
+      mobileNumber = mobileNumber.substring(1);
+    }
 
     if (!mobileNumber.startsWith("91")) {
       mobileNumber = "91" + mobileNumber;
@@ -86,7 +99,7 @@ router.post("/generateOtp/:rationId", async (req, res) => {
 
     console.log("Sending OTP to:", mobileNumber);
 
-    // ✅ send SMS using Twilio
+    // ✅ send SMS via Twilio
     await twilioClient.messages.create({
       body: `PDS System OTP: ${otp}. Valid for 5 minutes.`,
       from: process.env.TWILIO_PHONE_NUMBER,
@@ -106,6 +119,7 @@ router.post("/generateOtp/:rationId", async (req, res) => {
     });
   }
 });
+
 
 
 // Verify OTP
