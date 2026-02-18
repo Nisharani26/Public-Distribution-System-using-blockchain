@@ -149,8 +149,11 @@ export default function AuthShopPage({ user, onLogout }) {
 
   /* ---------------- REFETCH STOCK ON MONTH CHANGE ---------------- */
   useEffect(() => {
-  fetchShopStock(selectedShop);
-}, [fetchShopStock, selectedShop]);
+    if (selectedShop && selectedShop.shopNo) {
+      fetchShopStock(selectedShop.shopNo, selectedMonth);
+    }
+  }, [selectedShop, selectedMonth]);
+
   /* ---------------- FILTERED SHOPS ---------------- */
   const filteredShops = shops.filter(
     (s) =>
@@ -339,7 +342,7 @@ export default function AuthShopPage({ user, onLogout }) {
                       <td className="p-3">
                         <input
                           type="number"
-                          disabled={!isCurrentMonth} 
+                          disabled={!isCurrentMonth}
                           value={inputQty[item.itemId] || ""}
                           onChange={(e) => setInputQty({ ...inputQty, [item.itemId]: e.target.value })}
                           className="border p-1 w-20 rounded text-center"
@@ -348,7 +351,7 @@ export default function AuthShopPage({ user, onLogout }) {
                       </td>
                       <td className="p-3">
                         <button
-                          disabled={!isCurrentMonth} 
+                          disabled={!isCurrentMonth}
                           onClick={() => confirmAllocation(item.itemId)}
                           className="bg-blue-600 text-white px-3 py-1 rounded disabled:opacity-50"
                         >
