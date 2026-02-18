@@ -91,23 +91,16 @@ router.post("/generateOtp/:rationId", async (req, res) => {
     // ✅ use correct field: phone
     let mobileNumber = String(user.phone).replace(/\D/g, "");
 
-    if (!mobileNumber) {
+    // ensure it is exactly 10 digits
+    if (mobileNumber.length !== 10) {
       return res.status(400).json({
         success: false,
-        message: "Phone number missing for this user",
+        message: "Invalid phone number in database",
       });
     }
 
-    // ensure +91 format
-    if (mobileNumber.startsWith("0")) {
-      mobileNumber = mobileNumber.substring(1);
-    }
-
-    if (!mobileNumber.startsWith("91")) {
-      mobileNumber = "91" + mobileNumber;
-    }
-
-    mobileNumber = "+" + mobileNumber;
+    // ALWAYS add +91
+    mobileNumber = "+91" + mobileNumber;
 
     console.log("Sending OTP to:", mobileNumber);
 
