@@ -55,7 +55,7 @@ export default function CitizenOTPModal({ phone, rationId, onVerify, onClose }) 
 
     try {
       const res = await fetch(
-        "http://localhost:5000/api/citizen/verify-otp",
+        "https://public-distribution-system-using.onrender.com/api/citizen/verify-otp",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -99,7 +99,7 @@ export default function CitizenOTPModal({ phone, rationId, onVerify, onClose }) 
 
     try {
       const res = await fetch(
-        "http://localhost:5000/api/citizen/send-otp",
+        "https://public-distribution-system-using.onrender.com/api/citizen/send-otp",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

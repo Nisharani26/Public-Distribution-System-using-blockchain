@@ -16,7 +16,7 @@ export default function ShopkeeperTransactionHistory({ user, onLogout }) {
       const token = localStorage.getItem("token");
 
       try {
-        const res = await fetch(`http://localhost:5000/api/transactions/shop/${user.shopNo}`, {
+        const res = await fetch(`https://public-distribution-system-using.onrender.com/api/transactions/shop/${user.shopNo}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 

@@ -53,7 +53,7 @@ export default function AuthorityOTPModal({ phone, authorityId, onVerify, onClos
 
     try {
       const res = await fetch(
-        "http://localhost:5000/api/auth/authority/verify-otp",
+        "https://public-distribution-system-using.onrender.com/api/auth/authority/verify-otp",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -96,7 +96,7 @@ export default function AuthorityOTPModal({ phone, authorityId, onVerify, onClos
     setErrorMessage(""); // Clear error on resend
     try {
       const res = await fetch(
-        "http://localhost:5000/api/auth/authority/send-otp",
+        "https://public-distribution-system-using.onrender.com/api/auth/authority/send-otp",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

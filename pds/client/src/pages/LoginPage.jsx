@@ -61,7 +61,7 @@ export default function LoginPage({ onLogin }) {
     // ===== AUTHORITY =====
     if (role === "authority") {
       try {
-        const res = await fetch("http://localhost:5000/api/auth/authority/login", {
+        const res = await fetch("https://public-distribution-system-using.onrender.com/api/auth/authority/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ authorityId: userIdTrimmed, password }),
@@ -72,7 +72,7 @@ export default function LoginPage({ onLogin }) {
 
         setPendingUser({ authorityId: data.authorityId, mobile: data.mobile, name: data.name });
 
-        await fetch("http://localhost:5000/api/auth/authority/send-otp", {
+        await fetch("https://public-distribution-system-using.onrender.com/api/auth/authority/send-otp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ authorityId: data.authorityId }),
@@ -88,7 +88,7 @@ export default function LoginPage({ onLogin }) {
     // ===== CITIZEN =====
     if (role === "user") {
       try {
-        const res = await fetch("http://localhost:5000/api/citizen/send-otp", {
+        const res = await fetch("https://public-distribution-system-using.onrender.com/api/citizen/send-otp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ rationId: userIdTrimmed, phone: phoneTrimmed }),
@@ -113,7 +113,7 @@ export default function LoginPage({ onLogin }) {
     // ===== SHOPKEEPER =====
     if (role === "shopkeeper") {
       try {
-        const res = await fetch("http://localhost:5000/api/shopkeeper/send-otp", {
+        const res = await fetch("https://public-distribution-system-using.onrender.com/api/shopkeeper/send-otp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ shopNo: userIdTrimmed, phone: phoneTrimmed }),
@@ -144,14 +144,14 @@ export default function LoginPage({ onLogin }) {
     try {
       // Fetch profile
       const profileRes = await fetch(
-        `http://localhost:5000/api/citizen/profile/${pendingCitizen.rationId}`,
+        `https://public-distribution-system-using.onrender.com/api/citizen/profile/${pendingCitizen.rationId}`,
         { headers: { Authorization: `Bearer ${tokenStr}` } }
       );
       const profileData = await profileRes.json();
 
       // Fetch family
       const familyRes = await fetch(
-        `http://localhost:5000/api/citizen/family/${pendingCitizen.rationId}`,
+        `https://public-distribution-system-using.onrender.com/api/citizen/family/${pendingCitizen.rationId}`,
         { headers: { Authorization: `Bearer ${tokenStr}` } }
       );
       const familyData = familyRes.ok ? await familyRes.json() : { members: [] };

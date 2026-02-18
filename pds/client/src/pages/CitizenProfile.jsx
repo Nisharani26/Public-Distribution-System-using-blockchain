@@ -14,7 +14,7 @@ export default function CitizenProfile({ user, onLogout }) {
     async function fetchFamily() {
       try {
         const token = localStorage.getItem("token");
-        const res = await fetch(`http://localhost:5000/api/citizen/family/${user.rationId}`, {
+        const res = await fetch(`https://public-distribution-system-using.onrender.com/api/citizen/family/${user.rationId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to fetch family");
@@ -36,7 +36,7 @@ export default function CitizenProfile({ user, onLogout }) {
     async function fetchEntitlement() {
       try {
         const token = localStorage.getItem("token");
-        const res = await fetch(`http://localhost:5000/api/userStock/template`, {
+        const res = await fetch(`https://public-distribution-system-using.onrender.com/api/userStock/template`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to fetch stock template");

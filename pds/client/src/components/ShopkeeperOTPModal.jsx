@@ -55,7 +55,7 @@ export default function ShopkeeperOTPModal({ phone, shopNo, onVerify, onClose })
 
     try {
       const res = await fetch(
-        "http://localhost:5000/api/shopkeeper/verify-otp",
+        "https://public-distribution-system-using.onrender.com/api/shopkeeper/verify-otp",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -99,7 +99,7 @@ export default function ShopkeeperOTPModal({ phone, shopNo, onVerify, onClose })
 
     try {
       const res = await fetch(
-        "http://localhost:5000/api/shopkeeper/send-otp",
+        "https://public-distribution-system-using.onrender.com/api/shopkeeper/send-otp",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
