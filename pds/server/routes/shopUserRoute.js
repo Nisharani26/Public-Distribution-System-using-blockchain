@@ -67,7 +67,7 @@ router.post("/generateOtp/:rationId", async (req, res) => {
     }
 
     // ✅ check mobile exists
-    if (!user.mobile) {
+    if (!user.mobileNumber) {
       console.error("Mobile number missing for rationId:", rationId);
       return res.status(400).json({
         success: false,
@@ -84,9 +84,17 @@ router.post("/generateOtp/:rationId", async (req, res) => {
       expiresAt: Date.now() + 5 * 60 * 1000,
     });
 
-    // ✅ format mobile number to +91XXXXXXXXXX
-    let mobileNumber = String(user.mobile).replace(/\D/g, "");
+    // use same variable name as stored in DB (mobileNumber)
+    let mobileNumber = String(user.mobileNumber || "").replace(/\D/g, "");
 
+    if (!mobileNumber) {
+      return res.status(400).json({
+        success: false,
+        message: "Mobile number missing for this user"
+      });
+    }
+
+    // ensure +91 format
     if (mobileNumber.startsWith("0")) {
       mobileNumber = mobileNumber.substring(1);
     }
