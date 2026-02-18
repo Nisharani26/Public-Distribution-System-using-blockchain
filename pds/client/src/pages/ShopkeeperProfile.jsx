@@ -10,7 +10,7 @@ export default function ShopkeeperProfile({ onLogout }) {
       const token = localStorage.getItem("token");
 
       const res = await fetch(
-        "https://public-distribution-system-using.onrender.com/api/shopkeeper/profile",
+        "http://localhost:5000/api/shopkeeper/profile",
         {
           headers: { Authorization: `Bearer ${token}` },
         }

@@ -25,7 +25,7 @@ export default function ShopkeeperUsers({ user, onLogout }) {
         if (!shopNo) return;
 
         const res = await axios.get(
-          `https://public-distribution-system-using.onrender.com/api/shopUsers/${shopNo}/all`
+          `http://localhost:5000/api/shopUsers/${shopNo}/all`
         );
         setUsers(res.data);
       } catch (err) {
@@ -41,18 +41,18 @@ export default function ShopkeeperUsers({ user, onLogout }) {
       setShowModal(true);
 
       const res = await axios.get(
-        `https://public-distribution-system-using.onrender.com/api/citizen/shopkeeper/profile/${rationId}`
+        `http://localhost:5000/api/citizen/shopkeeper/profile/${rationId}`
       );
       setModalUser(res.data);
       setFamilyMembers(res.data.familyMembers || []);
 
       const userstockRes = await axios.get(
-        "https://public-distribution-system-using.onrender.com/api/userStock/template"
+        "http://localhost:5000/api/userStock/template"
       );
       setEntitlements(userstockRes.data);
 
       const requestsRes = await axios.get(
-        `https://public-distribution-system-using.onrender.com/api/userRequests/myRequests/${rationId}`
+        `http://localhost:5000/api/userRequests/myRequests/${rationId}`
       );
 
       setRequests(
@@ -65,7 +65,7 @@ export default function ShopkeeperUsers({ user, onLogout }) {
 
       setVerifiedRequests([]); // reset verified requests
       const stockRes = await axios.get(
-        `https://public-distribution-system-using.onrender.com/api/shopStock/${user.shopNo}/${new Date().toLocaleString(
+        `http://localhost:5000/api/shopStock/${user.shopNo}/${new Date().toLocaleString(
           "default",
           { month: "long" }
         )}/${new Date().getFullYear()}`
@@ -73,7 +73,7 @@ export default function ShopkeeperUsers({ user, onLogout }) {
       setShopStock(stockRes.data.items);
 
       const transactionsRes = await axios.get(
-        `https://public-distribution-system-using.onrender.com/api/transactions/user/${rationId}`
+        `http://localhost:5000/api/transactions/user/${rationId}`
       );
       const flatTransactions = [];
       transactionsRes.data.forEach((t) => {
@@ -104,7 +104,7 @@ export default function ShopkeeperUsers({ user, onLogout }) {
   const handleAcceptRequests = async () => {
     try {
       await axios.post(
-        `https://public-distribution-system-using.onrender.com/api/shopUsers/generateOtp/${modalUser.rationId}`
+        `http://localhost:5000/api/shopUsers/generateOtp/${modalUser.rationId}`
       );
       setShowOtpInput(true);
       alert("OTP has been generated. Check server terminal.");
@@ -119,7 +119,7 @@ export default function ShopkeeperUsers({ user, onLogout }) {
     if (!otp) return alert("Enter OTP!");
     try {
       const res = await axios.post(
-        `https://public-distribution-system-using.onrender.com/api/shopUsers/verifyOtp/${modalUser.rationId}`,
+        `http://localhost:5000/api/shopUsers/verifyOtp/${modalUser.rationId}`,
         { otp }
       );
       if (res.data.success) {
@@ -251,7 +251,7 @@ export default function ShopkeeperUsers({ user, onLogout }) {
 
         // Reduce stock in backend
         await axios.put(
-          `https://public-distribution-system-using.onrender.com/api/shopStock/reduceStock/${user.shopNo}/${month}/${year}`,
+          `http://localhost:5000/api/shopStock/reduceStock/${user.shopNo}/${month}/${year}`,
           { stockId: stockItem.stockId, quantity: qtyToSubmit }
         );
 
@@ -267,7 +267,7 @@ export default function ShopkeeperUsers({ user, onLogout }) {
       }
 
       // Create transaction
-      await axios.post("https://public-distribution-system-using.onrender.com/api/transactions/create", {
+      await axios.post("http://localhost:5000/api/transactions/create", {
         shopNo: user.shopNo,
         rationId: modalUser.rationId,
         items: successfulItems,
@@ -275,7 +275,7 @@ export default function ShopkeeperUsers({ user, onLogout }) {
 
       const successfulItemNames = successfulItems.map((i) => i.itemName);
       await axios.put(
-        `https://public-distribution-system-using.onrender.com/api/userRequests/mark-received/${modalUser.rationId}`,
+        `http://localhost:5000/api/userRequests/mark-received/${modalUser.rationId}`,
         { items: successfulItemNames }
       );
 

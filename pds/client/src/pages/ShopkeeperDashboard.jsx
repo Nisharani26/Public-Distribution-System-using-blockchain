@@ -37,7 +37,7 @@ export default function ShopkeeperDashboard({ user, onLogout }) {
       ========================== */
       try {
         const userRes = await axios.get(
-          `https://public-distribution-system-using.onrender.com/api/shopUsers/${user.shopNo}/count`
+          `http://localhost:5000/api/shopUsers/${user.shopNo}/count`
         );
         setTotalUsers(userRes.data.totalUsers);
       } catch (err) {
@@ -50,7 +50,7 @@ export default function ShopkeeperDashboard({ user, onLogout }) {
       ========================== */
       try {
         const stockRes = await axios.get(
-          `https://public-distribution-system-using.onrender.com/api/shopStock/${user.shopNo}/${month}/${year}`
+          `http://localhost:5000/api/shopStock/${user.shopNo}/${month}/${year}`
         );
 
         const stock = stockRes.data;
@@ -92,7 +92,7 @@ export default function ShopkeeperDashboard({ user, onLogout }) {
 
       for (const item of itemsGiven) {
         await axios.put(
-          `https://public-distribution-system-using.onrender.com/api/shopStock/reduceStock/${user.shopNo}/${month}/${year}`,
+          `http://localhost:5000/api/shopStock/reduceStock/${user.shopNo}/${month}/${year}`,
           {
             stockId: item.stockId,
             quantity: item.quantity
@@ -103,7 +103,7 @@ export default function ShopkeeperDashboard({ user, onLogout }) {
       alert("Stock updated successfully!");
 
       const stockRes = await axios.get(
-        `https://public-distribution-system-using.onrender.com/api/shopStock/${user.shopNo}/${month}/${year}`
+        `http://localhost:5000/api/shopStock/${user.shopNo}/${month}/${year}`
       );
 
       const stock = stockRes.data;

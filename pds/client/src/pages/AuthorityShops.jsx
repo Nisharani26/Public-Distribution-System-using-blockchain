@@ -35,7 +35,7 @@ export default function AuthShopPage({ user, onLogout }) {
       const token = localStorage.getItem("token");
       if (!token) return setLoading(false);
       try {
-        const res = await fetch("https://public-distribution-system-using.onrender.com/api/auth/authShops/all", {
+        const res = await fetch("http://localhost:5000/api/auth/authShops/all", {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -54,7 +54,7 @@ export default function AuthShopPage({ user, onLogout }) {
   const fetchUsersCount = async (shopNo) => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("https://public-distribution-system-using.onrender.com/api/auth/authUsers/all", {
+      const res = await fetch("http://localhost:5000/api/auth/authUsers/all", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -76,7 +76,7 @@ export default function AuthShopPage({ user, onLogout }) {
       const monthName = new Date(year, monthIndex - 1).toLocaleString("default", { month: "long" });
 
       const res = await fetch(
-        `https://public-distribution-system-using.onrender.com/api/shopStock/${shopNo}/${monthName}/${year}`,
+        `http://localhost:5000/api/shopStock/${shopNo}/${monthName}/${year}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const data = await res.json();
@@ -121,7 +121,7 @@ export default function AuthShopPage({ user, onLogout }) {
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(
-        `https://public-distribution-system-using.onrender.com/api/shopTransaction/shop/${shopNo}`,
+        `http://localhost:5000/api/shopTransaction/shop/${shopNo}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const data = await res.json();
@@ -189,7 +189,7 @@ export default function AuthShopPage({ user, onLogout }) {
 
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("https://public-distribution-system-using.onrender.com/api/shopStock/allocate", {
+      const res = await fetch("http://localhost:5000/api/shopStock/allocate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

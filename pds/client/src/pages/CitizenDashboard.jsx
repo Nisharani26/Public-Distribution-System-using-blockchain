@@ -25,7 +25,7 @@ export default function CitizenDashboard({ user, onLogout }) {
       try {
         const token = localStorage.getItem("token");
         const res = await fetch(
-          `https://public-distribution-system-using.onrender.com/api/citizen/family/${user.rationId}`,
+          `http://localhost:5000/api/citizen/family/${user.rationId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const data = await res.json();
@@ -44,7 +44,7 @@ export default function CitizenDashboard({ user, onLogout }) {
       try {
         const token = localStorage.getItem("token");
         const res = await fetch(
-          `https://public-distribution-system-using.onrender.com/api/shopkeeper/shop/${user.assignedShop}`,
+          `http://localhost:5000/api/shopkeeper/shop/${user.assignedShop}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const shop = await res.json();
@@ -74,7 +74,7 @@ export default function CitizenDashboard({ user, onLogout }) {
         const year = today.getFullYear();
 
         const res = await fetch(
-          `https://public-distribution-system-using.onrender.com/api/shopStock/${user.assignedShop}/${monthName}/${year}`,
+          `http://localhost:5000/api/shopStock/${user.assignedShop}/${monthName}/${year}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const data = await res.json();
@@ -96,7 +96,7 @@ export default function CitizenDashboard({ user, onLogout }) {
         if (!user?.rationId) return;
         const token = localStorage.getItem("token");
         const res = await fetch(
-          `https://public-distribution-system-using.onrender.com/api/complaints/citizen/${user.rationId}`,
+          `http://localhost:5000/api/complaints/citizen/${user.rationId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const data = await res.json();
@@ -122,7 +122,7 @@ export default function CitizenDashboard({ user, onLogout }) {
 
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("https://public-distribution-system-using.onrender.com/api/complaints/add", {
+      const res = await fetch("http://localhost:5000/api/complaints/add", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -158,7 +158,7 @@ export default function CitizenDashboard({ user, onLogout }) {
     const fetchEntitlement = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await fetch(`https://public-distribution-system-using.onrender.com/api/userStock/template`, {
+        const res = await fetch(`http://localhost:5000/api/userStock/template`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to fetch stock template");
@@ -189,7 +189,7 @@ export default function CitizenDashboard({ user, onLogout }) {
         if (!user?.rationId) return;
         const token = localStorage.getItem("token");
         const res = await fetch(
-          `https://public-distribution-system-using.onrender.com/api/userRequests/myRequests/${user.rationId}`,
+          `http://localhost:5000/api/userRequests/myRequests/${user.rationId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const data = await res.json();
@@ -212,7 +212,7 @@ export default function CitizenDashboard({ user, onLogout }) {
   const handleRequestItem = async (item) => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("https://public-distribution-system-using.onrender.com/api/userRequests/create", {
+      const res = await fetch("http://localhost:5000/api/userRequests/create", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

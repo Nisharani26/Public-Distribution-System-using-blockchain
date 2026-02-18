@@ -28,7 +28,7 @@ export default function AuthorityAudit({ user, onLogout }) {
     const fetchShops = async () => {
       try {
         const res = await fetch(
-          "https://public-distribution-system-using.onrender.com/api/auth/authShops/all",
+          "http://localhost:5000/api/auth/authShops/all",
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const data = await res.json();
@@ -45,7 +45,7 @@ export default function AuthorityAudit({ user, onLogout }) {
     const fetchUsers = async () => {
       try {
         const res = await fetch(
-          "https://public-distribution-system-using.onrender.com/api/auth/authUsers/all",
+          "http://localhost:5000/api/auth/authUsers/all",
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const data = await res.json();
@@ -63,7 +63,7 @@ export default function AuthorityAudit({ user, onLogout }) {
     setLoading(true);
     try {
       const res = await fetch(
-        `https://public-distribution-system-using.onrender.com/api/shopStock/transactions/${shopNo}`,
+        `http://localhost:5000/api/shopStock/transactions/${shopNo}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const data = await res.json();
@@ -82,7 +82,7 @@ export default function AuthorityAudit({ user, onLogout }) {
 
     try {
       const res = await fetch(
-        `https://public-distribution-system-using.onrender.com/api/transactions/blockchain/${rationId}`,
+        `http://localhost:5000/api/transactions/blockchain/${rationId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const data = await res.json();

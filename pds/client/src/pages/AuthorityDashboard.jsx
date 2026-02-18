@@ -58,7 +58,7 @@ export default function AuthorityDashboard() {
             }
 
             try {
-                const res = await fetch("https://public-distribution-system-using.onrender.com/api/auth/authority/dashboard", {
+                const res = await fetch("http://localhost:5000/api/auth/authority/dashboard", {
                     method: "GET",
                     headers: {
                         "Content-Type": "application/json",
@@ -87,14 +87,14 @@ export default function AuthorityDashboard() {
 
             try {
                 // Fetch users
-                const usersRes = await fetch("https://public-distribution-system-using.onrender.com/api/auth/authUsers/all", {
+                const usersRes = await fetch("http://localhost:5000/api/auth/authUsers/all", {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
                 const usersData = await usersRes.json();
                 setTotalUsers(Array.isArray(usersData) ? usersData.length : 0);
 
                 // Fetch shops
-                const shopsRes = await fetch("https://public-distribution-system-using.onrender.com/api/auth/authShops/all", {
+                const shopsRes = await fetch("http://localhost:5000/api/auth/authShops/all", {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
                 const shopsData = await shopsRes.json();
