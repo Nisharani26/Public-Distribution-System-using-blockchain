@@ -8,7 +8,6 @@ let latestWeight = null;
 app.use(cors());
 app.use(express.json());
 
-// Raspberry Pi sends weight
 app.post("/api/weight", (req, res) => {
   const { weight, unit, deviceId } = req.body;
 
@@ -23,7 +22,6 @@ app.post("/api/weight", (req, res) => {
   res.json({ status: "received" });
 });
 
-// Frontend fetches weight
 app.get("/api/weight", (req, res) => {
   if (!latestWeight) {
     return res.status(200).json({ ready: false });
@@ -35,7 +33,8 @@ app.get("/api/weight", (req, res) => {
   });
 });
 
-const PORT = 5001;
-app.listen(PORT, "0.0.0.0", () => {
+const PORT = process.env.PORT || 5001;
+
+app.listen(PORT, () => {
   console.log(`⚙️ Hardware server running on port ${PORT}`);
 });

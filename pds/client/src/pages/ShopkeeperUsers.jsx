@@ -138,7 +138,7 @@ export default function ShopkeeperUsers({ user, onLogout }) {
   //Fetch weight
   const fetchWeight = async (id) => {
     try {
-      const res = await fetch("http://192.168.0.103:5001/api/weight");
+      const res = await fetch("https://raspberry-pi-hardware.onrender.com/api/weight");
 
       if (!res.ok) {
         alert("Failed to connect to weight device.");
