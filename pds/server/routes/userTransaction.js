@@ -129,14 +129,17 @@ router.post("/create", async (req, res) => {
     const hash = hashData(hashPayload);
 
     // 3️⃣ Push to Blockchain
-    const accounts = await web3.eth.getAccounts();
+    const account = web3.eth.accounts.privateKeyToAccount(process.env.PRIVATE_KEY);
+
+    web3.eth.accounts.wallet.add(account);
 
     const receipt = await contract.methods
       .addTransaction(TX_TYPE_USER, transaction._id.toString(), hash)
       .send({
-        from: accounts[0],
+        from: account.address,
         gas: 300000,
       });
+
 
     // 4️⃣ BigInt Safe Receipt
     const safeReceipt = JSON.parse(

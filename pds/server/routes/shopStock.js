@@ -92,7 +92,7 @@ router.post("/allocate", async (req, res) => {
 
     // 4️⃣ PUSH TO BLOCKCHAIN
     const account = web3.eth.accounts.privateKeyToAccount(process.env.PRIVATE_KEY);
-
+    web3.eth.accounts.wallet.add(account);
     const receipt = await contract.methods
       .addTransaction(TX_TYPE_SHOP, tx._id.toString(), hash)
       .send({ from: account.address, gas: 500000 });
