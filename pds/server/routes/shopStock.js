@@ -91,11 +91,11 @@ router.post("/allocate", async (req, res) => {
     const hash = hashData(hashPayload);
 
     // 4️⃣ PUSH TO BLOCKCHAIN
-    const accounts = await web3.eth.getAccounts();
+    const account = web3.eth.accounts.privateKeyToAccount(process.env.PRIVATE_KEY);
 
     const receipt = await contract.methods
       .addTransaction(TX_TYPE_SHOP, tx._id.toString(), hash)
-      .send({ from: accounts[0], gas: 500000 });
+      .send({ from: account.address, gas: 500000 });
 
     const safeReceipt = JSON.parse(
       JSON.stringify(receipt, (key, value) =>
