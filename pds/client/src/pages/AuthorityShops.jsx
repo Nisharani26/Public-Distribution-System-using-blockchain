@@ -167,8 +167,11 @@ export default function AuthShopPage({ user, onLogout }) {
     if (!qty || qty <= 0) return;
 
     const updatedItems = items.map((i) =>
-      i.itemId === itemId ? { ...i, allocated: i.allocated + qty, available: i.available - qty } : i
+      i.itemId === itemId
+        ? { ...i, allocated: i.allocated + qty, available: i.available + qty }
+        : i
     );
+
     setItems(updatedItems);
     setInputQty({ ...inputQty, [itemId]: "" });
 
